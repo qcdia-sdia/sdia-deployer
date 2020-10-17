@@ -51,7 +51,10 @@ class AnsibleService:
                 create = standard['create']
                 inputs = create['inputs']
                 git_url = inputs['repository']
-                playbook_names = inputs['resources']
+                if 'playbooks' in inputs:
+                    playbook_names = inputs['playbooks']
+                else:
+                    playbook_names = inputs['resources']
                 for playbook_name in playbook_names:
                     task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name)
                     if self.semaphore_helper.get_task(project_id, task_id).status != 'success':
@@ -61,7 +64,10 @@ class AnsibleService:
                     configure = standard['configure']
                     inputs = configure['inputs']
                     git_url = inputs['repository']
-                    playbook_names = inputs['resources']
+                    if 'playbooks' in inputs:
+                        playbook_names = inputs['playbooks']
+                    else:
+                        playbook_names = inputs['resources']
                     for playbook_name in playbook_names:
                         task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name)
                         if self.semaphore_helper.get_task(project_id, task_id).status != 'success':

@@ -30,7 +30,7 @@ class TestDeployer(unittest.TestCase):
         parsed_json_message = self.get_request_message()
         tosca_template_path = self.get_tosca_template_path(parsed_json_message)
         tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
-        nodes_pairs = tosca_helper.get_deployment_node_pairs()
+        nodes_pairs = tosca_helper.get_deployment_node_pipeline()
         vms=tosca_helper.get_vms()
 
     def test(self):

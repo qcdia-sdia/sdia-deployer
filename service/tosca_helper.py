@@ -36,7 +36,7 @@ class ToscaHelper:
         return interface_types
 
     def get_application_nodes(self):
-        return self.tosca_client.get_node_templates(self.doc_id, type_name='tosca.nodes.ARTICONF.Application')
+        return self.tosca_client.get_node_templates(self.doc_id, type_name='tosca.nodes.QC.Application')
 
     def get_deployment_node_pairs(self):
         nodes_to_deploy = self.get_application_nodes()
@@ -48,8 +48,8 @@ class ToscaHelper:
                 # But the topology is directly connected to the orchestrator not the VMs.
                 # So we explicitly get the VMs
                 # I don't like this solution but I can't think of something better.
-                if related_node.node_template.type == 'tosca.nodes.ARTICONF.VM.topology':
-                    vms = self.tosca_client.get_node_templates(self.doc_id,type_name='tosca.nodes.ARTICONF.VM.Compute')
+                if related_node.node_template.type == 'tosca.nodes.QC.VM.topology':
+                    vms = self.tosca_client.get_node_templates(self.doc_id,type_name='tosca.nodes.QC.VM.Compute')
                     related_node = vms
                 pair = (related_node, node)
                 nodes_pairs.append(pair)

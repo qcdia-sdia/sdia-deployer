@@ -71,7 +71,7 @@ class ToscaHelper:
         try:
             code = urllib.request.urlopen(url).getcode()
         except Exception as e:
-            if e.code == 404:
+            if hasattr(e, 'code') and e.code == 404:
                 return True
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]

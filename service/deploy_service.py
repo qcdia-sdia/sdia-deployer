@@ -61,6 +61,7 @@ class DeployService:
     def set_attributes(self, task_outputs,source):
         # target = nodes_pair[0]
         # source = nodes_pair[1]
+        source = self.set_current_state_attribute(source=source, task_outputs=task_outputs)
         if source.node_template.type == 'tosca.nodes.QC.docker.Orchestrator.Kubernetes':
             source = self.set_kubernetes_attributes(source=source,task_outputs=task_outputs)
         if source.node_template.type == 'tosca.nodes.QC.Container.Application.Docker':
@@ -186,4 +187,9 @@ class DeployService:
             for port in ['8090','9000','9090']:
                 service_urls.append('http://' + self.master_ip + ':' + str(port))
             attributes['service_urls'] = service_urls
+        return source
+
+    def set_current_state_attribute(self, source, task_outputs):
+        attributes = source.node_template.attributes
+        attributes['current_state'] = 'RUNNING'
         return source

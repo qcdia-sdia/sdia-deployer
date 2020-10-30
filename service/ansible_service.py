@@ -35,6 +35,7 @@ class AnsibleService:
         desired_state = None
         tasks_outputs = {}
         interfaces = application.node_template.interfaces
+        current_state = 'Unknown'
         if 'current_state' in application.node_template.attributes:
             current_state = application.node_template.attributes['current_state']
         if 'desired_state' in application.node_template.attributes:
@@ -49,7 +50,7 @@ class AnsibleService:
             key_id = self.semaphore_helper.create_ssh_key(application.name, project_id, private_key)
             inventory_id = self.semaphore_helper.create_inventory(application.name, project_id, key_id,
                                                                   inventory_contents)
-            if current_state and current_state != desired_state:
+            if current_state != desired_state:
                 if 'RUNNING' == desired_state:
                     interface = interfaces[interface_type]
                     create = interface['create']

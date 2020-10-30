@@ -49,66 +49,75 @@ class AnsibleService:
             key_id = self.semaphore_helper.create_ssh_key(application.name, project_id, private_key)
             inventory_id = self.semaphore_helper.create_inventory(application.name, project_id, key_id,
                                                                   inventory_contents)
-            if 'RUNNING' == desired_state:
-                interface = interfaces[interface_type]
-                create = interface['create']
-                inputs = create['inputs']
-                git_url = inputs['repository']
-                if 'resources' in inputs:
-                    playbook_names = inputs['resources']
-                    for playbook_name in playbook_names:
-                        environment_id = None
-                        if env_vars:
-                            environment_id = self.semaphore_helper.create_environment(project_id, name, env_vars)
-                        arguments = None
-                        if application.name == 'gluster_fs' or application.name == 'glusterfs' or application.name == 'tic':
-                            for vm in vms:
-                                attributes = vm.node_template.attributes
-                                if attributes['role'] == 'master':
-                                    master_ip = attributes['public_ip']
-                                    break
-                            arguments = '["-u","vm_user","--extra-vars","gluster_cluster_host0=\'' + master_ip \
-                                        + '\' gluster_cluster_volume=\'gfs0\' devmode=\'false\' ' \
-                                          'device_path=\'/dev/xvdh\' gfs_size=\'15G\'"]'
-                        task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name,
-                                                environment_id=environment_id, arguments=arguments)
-                        count = 0
-                        while self.semaphore_helper.get_task(project_id, task_id).status != 'success':
-                            task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name,
-                                                    environment_id=environment_id, arguments=arguments)
-                            count += 1
-                            if count >= 3:
-                                msg = ' '
-                                for out in self.semaphore_helper.get_task_outputs(project_id, task_id):
-                                    msg = msg + ' ' + out.output
-                                raise Exception(
-                                    'Task: ' + playbook_name + ' failed. ' + self.semaphore_helper.get_task(project_id,
-                                                                                                            task_id).status + ' Output: ' + msg)
-
-                        tasks_outputs[task_id] = self.semaphore_helper.get_task_outputs(project_id, task_id)
-
-                if 'configure' in interface and self.semaphore_helper.get_task(project_id,
-                                                                               task_id).status == 'success' and 'resources' in inputs:
-                    configure = interface['configure']
-                    inputs = configure['inputs']
+            if current_state and current_state != desired_state:
+                if 'RUNNING' == desired_state:
+                    interface = interfaces[interface_type]
+                    create = interface['create']
+                    inputs = create['inputs']
                     git_url = inputs['repository']
-                    playbook_names = inputs['resources']
-                    for playbook_name in playbook_names:
-                        environment_id = None
-                        if env_vars:
-                            environment_id = self.semaphore_helper.create_environment(project_id, name, env_vars)
-                        task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name,
-                                                environment_id=environment_id)
-                        if self.semaphore_helper.get_task(project_id, task_id).status != 'success':
-                            msg = ''
-                            for out in self.semaphore_helper.get_task_outputs(project_id, task_id):
-                                msg = msg + out.output
-                            raise Exception(
-                                'Task: ' + playbook_name + ' failed. ' + self.semaphore_helper.get_task(project_id,
-                                                                                                        task_id).status + ' Output: ' + msg)
-                        # logger.info('playbook: ' + playbook_name + ' task_id: ' + str(task_id))
+
+                    task_id,tasks_outputs = self.create_node(interfaces=interfaces, interface_type=interface_type, env_vars=env_vars, project_id=project_id
+                                     , name=name, application=application, vms=vms, key_id=key_id, inventory_id=inventory_id)
+                    tasks_outputs[task_id] = self.semaphore_helper.get_task_outputs(project_id, task_id)
+
+
+                    # if 'resources' in inputs:
+                    #     playbook_names = inputs['resources']
+                    #     for playbook_name in playbook_names:
+                    #         environment_id = None
+                    #         if env_vars:
+                    #             environment_id = self.semaphore_helper.create_environment(project_id, name, env_vars)
+                    #         arguments = None
+                    #         if application.name == 'gluster_fs' or application.name == 'glusterfs' or application.name == 'tic':
+                    #             for vm in vms:
+                    #                 attributes = vm.node_template.attributes
+                    #                 if attributes['role'] == 'master':
+                    #                     master_ip = attributes['public_ip']
+                    #                     break
+                    #             arguments = '["-u","vm_user","--extra-vars","gluster_cluster_host0=\'' + master_ip \
+                    #                         + '\' gluster_cluster_volume=\'gfs0\' devmode=\'false\' ' \
+                    #                           'device_path=\'/dev/xvdh\' gfs_size=\'15G\'"]'
+                    #         task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name,
+                    #                                 environment_id=environment_id, arguments=arguments)
+                    #         count = 0
+                    #         while self.semaphore_helper.get_task(project_id, task_id).status != 'success':
+                    #             task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name,
+                    #                                     environment_id=environment_id, arguments=arguments)
+                    #             count += 1
+                    #             if count >= 3:
+                    #                 msg = ' '
+                    #                 for out in self.semaphore_helper.get_task_outputs(project_id, task_id):
+                    #                     msg = msg + ' ' + out.output
+                    #                 raise Exception(
+                    #                     'Task: ' + playbook_name + ' failed. ' + self.semaphore_helper.get_task(project_id,
+                    #                                                                                             task_id).status + ' Output: ' + msg)
+                    #
+                    #         tasks_outputs[task_id] = self.semaphore_helper.get_task_outputs(project_id, task_id)
+
+                    if 'configure' in interface and self.semaphore_helper.get_task(project_id,
+                                                                                   task_id).status == 'success' and 'resources' in inputs:
+                        task_id = self.configure_node( interface=interface, project_id=project_id,name=name,env_vars=env_vars,key_id=key_id,inventory_id=inventory_id)
                         tasks_outputs[task_id] = self.semaphore_helper.get_task_outputs(project_id, task_id)
-            return tasks_outputs
+                        # configure = interface['configure']
+                        # inputs = configure['inputs']
+                        # git_url = inputs['repository']
+                        # playbook_names = inputs['resources']
+                        # for playbook_name in playbook_names:
+                        #     environment_id = None
+                        #     if env_vars:
+                        #         environment_id = self.semaphore_helper.create_environment(project_id, name, env_vars)
+                        #     task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name,
+                        #                             environment_id=environment_id)
+                        #     if self.semaphore_helper.get_task(project_id, task_id).status != 'success':
+                        #         msg = ''
+                        #         for out in self.semaphore_helper.get_task_outputs(project_id, task_id):
+                        #             msg = msg + out.output
+                        #         raise Exception(
+                        #             'Task: ' + playbook_name + ' failed. ' + self.semaphore_helper.get_task(project_id,
+                        #                                                                                     task_id).status + ' Output: ' + msg)
+                        #     # logger.info('playbook: ' + playbook_name + ' task_id: ' + str(task_id))
+                        #     tasks_outputs[task_id] = self.semaphore_helper.get_task_outputs(project_id, task_id)
+                return tasks_outputs
 
     def build_inventory(self, vms, application_name=None):
         # loader = DataLoader()
@@ -243,3 +252,61 @@ class AnsibleService:
         all['children'] = children
         inventory['all'] = all
         return inventory
+
+    def create_node(self, interfaces=None, interface_type=None, env_vars=None, project_id=None, name=None, application=None, vms=None,
+                    key_id=None, inventory_id=None):
+        interface = interfaces[interface_type]
+        create = interface['create']
+        inputs = create['inputs']
+        git_url = inputs['repository']
+        if 'resources' in inputs:
+            playbook_names = inputs['resources']
+            for playbook_name in playbook_names:
+                environment_id = None
+                if env_vars:
+                    environment_id = self.semaphore_helper.create_environment(project_id, name, env_vars)
+                arguments = None
+                if application.name == 'gluster_fs' or application.name == 'glusterfs' or application.name == 'tic':
+                    for vm in vms:
+                        attributes = vm.node_template.attributes
+                        if attributes['role'] == 'master':
+                            master_ip = attributes['public_ip']
+                            break
+                    arguments = '["-u","vm_user","--extra-vars","gluster_cluster_host0=\'' + master_ip \
+                                + '\' gluster_cluster_volume=\'gfs0\' devmode=\'false\' ' \
+                                  'device_path=\'/dev/xvdh\' gfs_size=\'15G\'"]'
+                task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name,
+                                        environment_id=environment_id, arguments=arguments)
+                count = 0
+                while self.semaphore_helper.get_task(project_id, task_id).status != 'success':
+                    task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name,
+                                            environment_id=environment_id, arguments=arguments)
+                    count += 1
+                    if count >= 3:
+                        msg = ' '
+                        for out in self.semaphore_helper.get_task_outputs(project_id, task_id):
+                            msg = msg + ' ' + out.output
+                        raise Exception(
+                            'Task: ' + playbook_name + ' failed. ' + self.semaphore_helper.get_task(project_id,
+                                                                                                    task_id).status + ' Output: ' + msg)
+        return task_id
+
+    def configure_node(self, interface=None, project_id=None,name=None,env_vars=None,key_id=None,inventory_id=None):
+        configure = interface['configure']
+        inputs = configure['inputs']
+        git_url = inputs['repository']
+        playbook_names = inputs['resources']
+        for playbook_name in playbook_names:
+            environment_id = None
+            if env_vars:
+                environment_id = self.semaphore_helper.create_environment(project_id, name, env_vars)
+            task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name,
+                                    environment_id=environment_id)
+            if self.semaphore_helper.get_task(project_id, task_id).status != 'success':
+                msg = ''
+                for out in self.semaphore_helper.get_task_outputs(project_id, task_id):
+                    msg = msg + out.output
+                raise Exception(
+                    'Task: ' + playbook_name + ' failed. ' + self.semaphore_helper.get_task(project_id,
+                                                                                            task_id).status + ' Output: ' + msg)
+        return task_id

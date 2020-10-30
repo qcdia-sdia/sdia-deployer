@@ -27,11 +27,14 @@ semaphore_base_url = 'http://localhost:3000/api'
 class TestDeployer(unittest.TestCase):
 
     def test_inventory(self):
-        parsed_json_message = self.get_request_message()
-        tosca_template_path = self.get_tosca_template_path(parsed_json_message)
-        tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
-        nodes_pairs = tosca_helper.get_deployment_node_pipeline()
-        vms=tosca_helper.get_vms()
+        tosca_service_is_up = ToscaHelper.service_is_up(sure_tosca_base_url)
+        semaphore_is_up = ToscaHelper.service_is_up(semaphore_base_url)
+        if tosca_service_is_up and semaphore_is_up:
+            parsed_json_message = self.get_request_message()
+            tosca_template_path = self.get_tosca_template_path(parsed_json_message)
+            tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
+            nodes_pairs = tosca_helper.get_deployment_node_pipeline()
+            vms=tosca_helper.get_vms()
 
     def test(self):
         parsed_json_message = self.get_request_message()

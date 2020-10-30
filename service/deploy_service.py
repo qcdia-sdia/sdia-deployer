@@ -61,6 +61,7 @@ class DeployService:
     def set_attributes(self, task_outputs,source):
         # target = nodes_pair[0]
         # source = nodes_pair[1]
+        source = self.set_current_state_attribute(source=source, task_outputs=task_outputs)
         if source.node_template.type == 'tosca.nodes.QC.docker.Orchestrator.Kubernetes':
             source = self.set_kubernetes_attributes(source=source,task_outputs=task_outputs)
         if source.node_template.type == 'tosca.nodes.QC.Container.Application.Docker':
@@ -143,25 +144,25 @@ class DeployService:
 
         k8s_dashboard_token = None
         k8s_services = None
-        for task_output_key in task_outputs:
-            task_output = task_outputs[task_output_key]
-            if not k8s_dashboard_token:
-                k8s_dashboard_token = self.parse_ansible_var('k8s_dashboard_token', task_output)
-            if not k8s_services:
-                k8s_services = self.parse_ansible_var('k8s_services', task_output)
-            if k8s_services and k8s_dashboard_token:
-                credential = {'token_type': 'k8s_dashboard_token'}
-                credential['token'] = self.get_dashboard_token(k8s_dashboard_token)
-                tokens.append(credential)
+        if task_outputs:
+            for task_output_key in task_outputs:
+                task_output = task_outputs[task_output_key]
+                if not k8s_dashboard_token:
+                    k8s_dashboard_token = self.parse_ansible_var('k8s_dashboard_token', task_output)
+                if not k8s_services:
+                    k8s_services = self.parse_ansible_var('k8s_services', task_output)
+                if k8s_services and k8s_dashboard_token:
+                    credential = {'token_type': 'k8s_dashboard_token'}
+                    credential['token'] = self.get_dashboard_token(k8s_dashboard_token)
+                    tokens.append(credential)
 
-                service_port = self.get_service_port(k8s_services, 'kubernetes-dashboard', 'nodePort')
-                dashboard_url = 'https://' + self.master_ip + ':' + str(service_port)
-                attributes['dashboard_url'] = dashboard_url
-                logger.info('source.node_template.attributes: ' + str(attributes))
-                return source
-        raise Exception(
-            'Did not find k8s_services and/or k8s_dashboard_token')
-        return None
+                    service_port = self.get_service_port(k8s_services, 'kubernetes-dashboard', 'nodePort')
+                    dashboard_url = 'https://' + self.master_ip + ':' + str(service_port)
+                    attributes['dashboard_url'] = dashboard_url
+                    logger.info('source.node_template.attributes: ' + str(attributes))
+            raise Exception(
+                'Did not find k8s_services and/or k8s_dashboard_token')
+            return source
 
     def set_docker_attributes(self, source, task_outputs):
         attributes = source.node_template.attributes
@@ -186,4 +187,10 @@ class DeployService:
             for port in ['8090','9000','9090']:
                 service_urls.append('http://' + self.master_ip + ':' + str(port))
             attributes['service_urls'] = service_urls
+        return source
+
+    def set_current_state_attribute(self, source, task_outputs):
+        attributes = source.node_template.attributes
+        if not 'current_state' in attributes:
+            attributes['current_state'] = 'RUNNING'
         return source

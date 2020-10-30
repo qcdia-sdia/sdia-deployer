@@ -162,7 +162,7 @@ class DeployService:
                     logger.info('source.node_template.attributes: ' + str(attributes))
             raise Exception(
                 'Did not find k8s_services and/or k8s_dashboard_token')
-            return source
+        return source
 
     def set_docker_attributes(self, source, task_outputs):
         attributes = source.node_template.attributes
@@ -177,7 +177,7 @@ class DeployService:
                 service_url = 'http://' + self.master_ip + ':' + str(service_port)
                 attributes['service_url'] = service_url
                 logger.info('source.node_template.attributes: ' + str(attributes))
-            return source
+        return source
 
     def set_tic_attributes(self, source, task_outputs):
         attributes = source.node_template.attributes

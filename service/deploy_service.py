@@ -160,8 +160,8 @@ class DeployService:
                     dashboard_url = 'https://' + self.master_ip + ':' + str(service_port)
                     attributes['dashboard_url'] = dashboard_url
                     logger.info('source.node_template.attributes: ' + str(attributes))
-            raise Exception(
-                'Did not find k8s_services and/or k8s_dashboard_token')
+            # raise Exception(
+            #     'Did not find k8s_services and/or k8s_dashboard_token')
         return source
 
     def set_docker_attributes(self, source, task_outputs):

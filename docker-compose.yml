@@ -1,13 +1,6 @@
 version: '3'
 services:
-    
-  rabbit:
-    image: rabbitmq:3.8-management
-    ports:   
-      - "5671-5672:5671-5672"
-      - "15672:15672"
-      - "4369:4369"
-      - "15671:15671"     
+
 
   mysql:
     image: mysql:5.7
@@ -16,6 +9,9 @@ services:
       MYSQL_DATABASE: semaphore
       MYSQL_USER: semaphore
       MYSQL_PASSWORD: semaphore
+#    networks:
+#      frontend:
+#        ipv4_address: 172.20.0.4
     ports:
       - "3306:3306"
       
@@ -37,14 +33,24 @@ services:
       - "3000:3000"
     depends_on:
       - mysql
-      
-  mongo:
-    image: mongo:4
-    ports:
-      - "27017:27017"               
-   
-            
+
+
   sure-tosca:
     image: qcdis/sure-tosca
-    ports: 
+    ports:
       - "8081:8081"
+
+
+  compute:
+    image: ubuntu:18.04
+    volumes:
+      - "./run_test_nodes.sh:/tmp/run_test_nodes.sh"
+      - "/var/run/docker.sock:/var/ru/docker.sock"
+    command: "/tmp/run_test_nodes.sh"
+
+  compute_1:
+    image: ubuntu:18.04
+    volumes:
+      - "./run_test_nodes.sh:/tmp/run_test_nodes.sh"
+      - "/var/run/docker.sock:/var/ru/docker.sock"
+    command: "/tmp/run_test_nodes.sh"

@@ -20,7 +20,7 @@ from service.deploy_service import DeployService
 from service.tosca_helper import  ToscaHelper
 
 sure_tosca_base_url = 'http://localhost:8081/tosca-sure/1.0.0'
-polemarch_base_url = 'http://localhost:30001/api/v2'
+polemarch_base_url = None#'http://localhost:30001/api/v2'
 semaphore_base_url = 'http://localhost:3000/api'
 
 

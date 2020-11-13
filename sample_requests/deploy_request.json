@@ -181,13 +181,6 @@
                 "node": "compute",
                 "relationship": "tosca.relationships.DependsOn"
               }
-            },
-            {
-              "vm": {
-                "capability": "tosca.capabilities.QC.VM",
-                "node": "compute_1",
-                "relationship": "tosca.relationships.DependsOn"
-              }
             }
           ],
           "interfaces": {

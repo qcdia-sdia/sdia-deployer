@@ -47,10 +47,3 @@ services:
       - "./run_test_nodes.sh:/tmp/run_test_nodes.sh"
       - "/var/run/docker.sock:/var/ru/docker.sock"
     command: "/tmp/run_test_nodes.sh"
-
-  compute_1:
-    image: ubuntu:18.04
-    volumes:
-      - "./run_test_nodes.sh:/tmp/run_test_nodes.sh"
-      - "/var/run/docker.sock:/var/ru/docker.sock"
-    command: "/tmp/run_test_nodes.sh"

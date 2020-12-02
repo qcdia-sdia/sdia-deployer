@@ -69,19 +69,7 @@ def save_tosca_template(tosca_template_dict):
     return  tosca_template_path
 
 
-def handle_delivery(message):
-    logger.info("Got: " + str(message))
-    try:
-        message = message.decode()
-    except (UnicodeDecodeError, AttributeError):
-        pass
-    parsed_json_message = json.loads(message)
-    owner = parsed_json_message['owner']
-    tosca_file_name = 'tosca_template'
-    tosca_template_dict = parsed_json_message['toscaTemplate']
-
-    tosca_template_path = save_tosca_template(tosca_template_dict)
-
+def software_deployment(tosca_template_path=None,tosca_template_dict=None):
     tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
     # nodes_to_deploy = tosca_helper.get_application_nodes()
     nodes = tosca_helper.get_deployment_node_pipeline()
@@ -93,7 +81,7 @@ def handle_delivery(message):
             updated_node = deployService.deploy(node)
             if isinstance(updated_node, list):
                 for node in updated_node:
-                    tosca_template_dict = tosca_helper.set_node(node,tosca_template_dict)
+                    tosca_template_dict = tosca_helper.set_node(node, tosca_template_dict)
                     # logger.info("tosca_template_dict :" + json.dumps(tosca_template_dict))
             else:
                 tosca_template_dict = tosca_helper.set_node(updated_node, tosca_template_dict)
@@ -109,6 +97,22 @@ def handle_delivery(message):
         track = traceback.format_exc()
         print(track)
         raise
+
+
+def handle_delivery(message):
+    logger.info("Got: " + str(message))
+    try:
+        message = message.decode()
+    except (UnicodeDecodeError, AttributeError):
+        pass
+    parsed_json_message = json.loads(message)
+    owner = parsed_json_message['owner']
+    tosca_file_name = 'tosca_template'
+    tosca_template_dict = parsed_json_message['toscaTemplate']
+
+    tosca_template_path = save_tosca_template(tosca_template_dict)
+
+    return software_deployment(tosca_template_dict=tosca_template_dict,tosca_template_path=tosca_template_path)
 
 
 def threaded_function(args):

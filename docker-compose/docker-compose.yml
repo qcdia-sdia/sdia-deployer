@@ -9,9 +9,6 @@ services:
       MYSQL_DATABASE: semaphore
       MYSQL_USER: semaphore
       MYSQL_PASSWORD: semaphore
-#    networks:
-#      frontend:
-#        ipv4_address: 172.20.0.4
     ports:
       - "3306:3306"
       

@@ -15,7 +15,7 @@
             "mem_size": "4000 MB",
             "num_cores": 2,
             "os": "Ubuntu 18.04",
-            "user_name": "cd "
+            "user_name": "vm_user"
           },
           "interfaces": {
             "Standard": {

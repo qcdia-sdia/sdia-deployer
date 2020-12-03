@@ -3,6 +3,7 @@ import os
 import sys
 import urllib.request
 
+import yaml
 from sure_tosca_client import Configuration, ApiClient, NodeTemplate
 from sure_tosca_client.api import default_api
 import networkx as nx
@@ -108,7 +109,14 @@ class ToscaHelper:
                 node_templates[node_name] = updated_node.node_template.to_dict()
                 return tosca_template_dict
 
+    def get_workflows(self):
+        with open(self.tosca_template_path) as file:
+            # The FullLoader parameter handles the conversion from YAML
+            # scalar values to Python the dictionary format
+            tosca_template = yaml.load(file, Loader=yaml.FullLoader)
 
+        if 'workflows' in tosca_template['topology_template']:
+            return tosca_template['topology_template']['workflows']
 
 
 def get_interface_types(node):

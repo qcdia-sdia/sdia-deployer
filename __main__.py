@@ -71,8 +71,8 @@ def save_tosca_template(tosca_template_dict):
 
 def software_deployment(tosca_template_path=None,tosca_template_dict=None):
     tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
-    # nodes_to_deploy = tosca_helper.get_application_nodes()
-    nodes = tosca_helper.get_deployment_node_pipeline()
+    nodes = tosca_helper.get_application_nodes()
+    # nodes = tosca_helper.get_deployment_node_pipeline()
 
     deployService = DeployService(semaphore_base_url=semaphore_base_url, semaphore_username=semaphore_username,
                                   semaphore_password=semaphore_password, vms=tosca_helper.get_vms())

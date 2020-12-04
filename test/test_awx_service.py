@@ -30,12 +30,14 @@ import logging
 
 from service.tosca_helper import ToscaHelper
 sure_tosca_base_url = 'http://localhost:8081/tosca-sure/1.0.0'
+awx_api = 'http://localhost/api/v2'
+awx_username = 'admin'
+awx_password = 'password'
 
 class TestAWXService(unittest.TestCase):
 
     def test(self):
-        parsed_json_message = self.get_request_message('https://raw.githubusercontent.com/qcdis-sdia/sdia-deployer/master'
-                                                       '/sample_requests/deploy_request.json')
+        parsed_json_message = self.get_request_message_from_url('https://raw.githubusercontent.com/qcdis-sdia/sdia-deployer/develop/sample_requests/provision_request_workflow.json')
         owner = parsed_json_message['owner']
         tosca_file_name = 'tosca_template'
         tosca_template_dict = parsed_json_message['toscaTemplate']
@@ -44,18 +46,27 @@ class TestAWXService(unittest.TestCase):
         if tosca_service_is_up:
             tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
             workflows = tosca_helper.get_workflows()
+            awx = AWXService(api_url=awx_api,username=awx_username,password=awx_password)
             if workflows:
                 for workflow_name in workflows:
                     workflow = workflows[workflow_name]
+                    awx.create_workflow(workflow,workflow_name)
 
 
 
-    def get_request_message(self,url):
+
+
+
+    def get_request_message_from_url(self,url):
         logger = logging.getLogger(__name__)
         with urllib.request.urlopen(
                 url) as stream:
             parsed_json_message = json.load(stream)
         return parsed_json_message
+
+    def get_request_message_from_file(self,path):
+        with open(path, 'w') as outfile:
+            return yaml.dump(path, outfile, default_flow_style=False)
 
     def get_tosca_template_path(self,parsed_json_message):
         tosca_file_name = 'tosca_template'

@@ -14,5 +14,6 @@ urllib3==1.25.8
 kubernetes==11.0.0
 sure-tosca-client==1.0.3
 semaphore-client==1.0.0
-ansibleawx-client==0.1.1
+ansible-tower-cli==3.3.9
+awxkit==15.0.1
 

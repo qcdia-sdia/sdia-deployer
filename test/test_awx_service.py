@@ -54,9 +54,6 @@ class TestAWXService(unittest.TestCase):
             for tosca_node_name in node_templates:
                 tosca_node = node_templates[tosca_node_name]
                 project_ids = self.create_job_templates(tosca_node, awx)
-
-
-                print(tosca_node)
             # if workflows:
             #     for workflow_name in workflows:
             #         workflow = workflows[workflow_name]
@@ -100,6 +97,8 @@ class TestAWXService(unittest.TestCase):
                         project_id = awx.create_project(project_name=repository_url, scm_url=repository_url,
                                                         scm_branch='master', scm_type='git')
                         operations['project_id'] = project_id
+                        inventory = step['inputs']['inventory']
+                        inventory_id = awx.create_inventory(inventory_name=operations['name'],inventory=inventory)
 
         return project_ids
 

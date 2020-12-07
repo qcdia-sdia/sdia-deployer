@@ -3,6 +3,7 @@ import os
 import sys
 import urllib.request
 
+import yaml
 from sure_tosca_client import Configuration, ApiClient, NodeTemplate
 from sure_tosca_client.api import default_api
 import networkx as nx
@@ -40,8 +41,23 @@ class ToscaHelper:
     def get_application_nodes(self):
         return self.tosca_client.get_node_templates(self.doc_id, type_name='tosca.nodes.QC.Application')
 
+    def get_vm_topologies(self):
+        return self.tosca_client.get_node_templates(self.doc_id, type_name='tosca.nodes.QC.VM.topology')
+
     def get_deployment_node_pipeline(self):
-        nodes_to_deploy = self.get_application_nodes()
+        vm_topologies = self.get_vm_topologies()
+        nodes_to_deploy = []
+        for vm_topology_map in vm_topologies:
+            vm_topology = vm_topology_map.node_template
+            if hasattr(vm_topology,'attributes') and \
+                    'desired_state' in vm_topology.attributes and \
+                    vm_topology.attributes['desired_state'] == 'RUNNING':
+                if 'current_state' in vm_topology.attributes  and \
+                        vm_topology.attributes['current_state'] == 'RUNNING':
+                    continue
+                else:
+                    nodes_to_deploy.append(vm_topology_map)
+        nodes_to_deploy.extend(self.get_application_nodes())
         G = nx.DiGraph()
         sorted_nodes = []
         for node in nodes_to_deploy:
@@ -92,6 +108,15 @@ class ToscaHelper:
             if node_name == updated_node.name:
                 node_templates[node_name] = updated_node.node_template.to_dict()
                 return tosca_template_dict
+
+    def get_workflows(self):
+        with open(self.tosca_template_path) as file:
+            # The FullLoader parameter handles the conversion from YAML
+            # scalar values to Python the dictionary format
+            tosca_template = yaml.load(file, Loader=yaml.FullLoader)
+
+        if 'workflows' in tosca_template['topology_template']:
+            return tosca_template['topology_template']['workflows']
 
 
 def get_interface_types(node):

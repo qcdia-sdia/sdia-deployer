@@ -1,7 +1,11 @@
 import datetime
+import tempfile
 
 import ansibleawx
 import awxkit
+import yaml
+from ansible.inventory.manager import InventoryManager
+from ansible.parsing.dataloader import DataLoader
 from tower_cli import get_resource
 from tower_cli.exceptions import Found, AuthError
 from tower_cli.conf import settings
@@ -9,6 +13,7 @@ import os
 import json
 import requests
 from base64 import b64encode
+
 
 class AWXService:
 
@@ -68,6 +73,12 @@ class AWXService:
         # return project_id
 
     def create_inventory(self, inventory_name=None,inventory=None):
+        loader = DataLoader()
+        fd, inventory_path = tempfile.mkstemp()
+        with os.fdopen(fd, 'w') as outfile:
+            yaml.dump(inventory, outfile, default_flow_style=False)
+        inventory_manager = InventoryManager(loader=loader, sources=inventory_path)
+
         body = {
                 'name': inventory_name,
                 'description': '',
@@ -77,30 +88,18 @@ class AWXService:
                 'variables': '',
                 'insights_credential': None
         }
+        inventory_ids = self.post(body, 'inventories')
+        for group_name in inventory_manager.groups:
+            group = inventory_manager.groups[group_name]
+            if group_name == 'all' or group_name == 'ungrouped':
+                for host in group.hosts:
+                    inventory_hosts_id = self.create_inventory_hosts(host,inventory_id=inventory_ids[0])
+            else:
+                inventory_group_ids = self.create_inventory_group(group_name, group, inventory_ids[0])
+                for host in group.hosts:
+                    inventory_hosts_id = self.create_inventory_hosts(host,inventory_group_id=inventory_group_ids[0])
 
-        inventory_id =  self.post(body,'inventories')
-        for hosts in inventory:
-            all = hosts['all']
-            if 'hosts' in all:
-                hosts = hosts['all']['hosts']
-                print(hosts)
-            if 'children' in all:
-                children = hosts['all']['children']
-                for role in children:
-                    print(child)
-
-        #     for role_name in hosts:
-        #         role = hosts[role_name]
-        #         for r in role:
-        #             print(r)
-        #         body = {
-        #             'name': '',
-        #             'description': '',
-        #             'enabled': True,
-        #             'instance_id': '',
-        #             'variables': ''
-        #         }
-
+        return inventory_ids[0]
 
     def create_workflow(self, tosca_workflow, workflow_name):
         description = ''
@@ -139,19 +138,130 @@ class AWXService:
         # print(awx_workflow)
 
     def post(self, body, api_path):
+
         r = self._session.post(self.api_url + '/'+api_path+'/', data=json.dumps(body), headers=self.headers)
-        id = None
+        ids = []
         if r.status_code == 201:
             id = r.json()['id']
+            ids.append(ids)
+            return ids
         elif r.status_code == 400 and 'already exists' in r.text:
             r = self._session.get(self.api_url + '/'+api_path+'/?name=' + body['name'],headers=self.headers)
             results = r.json()['results']
-            if len(results) > 1:
-                raise Exception('Got back more than one results for name: '+body['name'])
-            id = results[0]['id']
-        return id
+            # if len(results) > 1:
+            #     raise Exception('Got back more than one results for name: '+body['name'])
+            for res in results:
+                ids.append(res['id'])
+            return ids
+        else:
+            print(body)
+            raise Exception(r.text)
 
 
 
+    def create_inventory_group(self, group_name, group,inventory_id):
+        if 'inventory_file' in group.vars:
+            group.vars.pop('inventory_file')
+        if 'inventory_dir' in group.vars:
+            group.vars.pop('inventory_dir')
+        body = {
+            'name': group_name,
+            'description': '',
+            'variables': json.dumps(group.vars)
+        }
+        inventory_group_ids = self.post(body,'inventories/'+str(inventory_id)+'/groups')
+        return inventory_group_ids[0]
+
+    def create_inventory_hosts(self, host, inventory_id=None,inventory_group_id=None):
+        inventory_hosts_ids = None
+        awx_hosts = self.get_resources('inventories/' + str(inventory_id) + '/hosts')
+        if awx_hosts:
+            if 'inventory_file' in host.vars:
+                host.vars.pop('inventory_file')
+            if 'inventory_dir' in host.vars:
+                host.vars.pop('inventory_dir')
+            if inventory_id:
+                body = {
+                    'name': host.address,
+                    'description': '',
+                    'inventory': inventory_id,
+                    'enabled': True,
+                    'instance_id': '',
+                    'variables': json.dumps(host.vars)
+                }
+
+
+                inventory_hosts_ids = []
+                for awx_host in awx_hosts:
+                    if awx_host['name'] == host.address:
+                        inventory_hosts_ids.append(awx_host['id'])
+                        return inventory_hosts_ids
+
+                inventory_hosts_ids = self.post(body, 'hosts')
+            if inventory_group_id:
+                body = {
+                    'name': host.address,
+                    'description': '',
+                    'enabled': True,
+                    'instance_id': '',
+                    'variables': json.dumps(host.vars)
+                }
+                # inventory_hosts_ids = self.post(body, 'inventories/'+str(inventory_id)+'/hosts')
+
+
+        return inventory_hosts_ids
+
+    def get_resources(self, api_path):
+        r = self._session.get(self.api_url + '/' + api_path, headers=self.headers)
+        if r.status_code == 200:
+            return r.json()['results']
+        if r.status_code == 404:
+            return None
+        else:
+            raise Exception(r.text)
+
+
+    def create_job_template(self,operation):
+        body = {
+            
+                'name': operation['name'],
+                'description': '',
+                'job_type': 'run',
+                'inventory': operation['inventory'],
+                'project': operation['project'],
+                'playbook': operation['implementation'],
+                'scm_branch': '',
+                'forks': 0,
+                'limit': '',
+                'verbosity': 0,
+                'extra_vars': '',
+                'job_tags': '',
+                'force_handlers': False,
+                'skip_tags': '',
+                'start_at_task': '',
+                'timeout': 0,
+                'use_fact_cache': False,
+                'host_config_key': '',
+                'ask_scm_branch_on_launch': False,
+                'ask_diff_mode_on_launch': False,
+                'ask_variables_on_launch': False,
+                'ask_limit_on_launch': False,
+                'ask_tags_on_launch': False,
+                'ask_skip_tags_on_launch': False,
+                'ask_job_type_on_launch': False,
+                'ask_verbosity_on_launch': False,
+                'ask_inventory_on_launch': False,
+                'ask_credential_on_launch': False,
+                'survey_enabled': False,
+                'become_enabled': False,
+                'diff_mode': False,
+                'allow_simultaneous': False,
+                'custom_virtualenv': None,
+                'job_slice_count': 1,
+                'webhook_service': None,
+                'webhook_credential': None
+            }
+        job_templates_ids = self.post(body,'job_templates')
+        return job_templates_ids
 
 

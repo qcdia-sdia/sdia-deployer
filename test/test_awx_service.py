@@ -38,13 +38,14 @@ class TestAWXService(unittest.TestCase):
 
     def test(self):
         # parsed_json_message = self.get_request_message_from_url('https://raw.githubusercontent.com/qcdis-sdia/sdia-deployer/develop/sample_requests/provision_request_workflow.json')
-        parsed_json_message = self.get_request_message_from_file('../sample_requests/provision_request_workflow.json')
-        owner = parsed_json_message['owner']
-        tosca_file_name = 'tosca_template'
-        tosca_template_dict = parsed_json_message['toscaTemplate']
+        # parsed_json_message = self.get_request_message_from_file('../sample_requests/provision_request_workflow.json')
+        # owner = parsed_json_message['owner']
+        # tosca_file_name = 'tosca_template'
+        # tosca_template_dict = parsed_json_message['toscaTemplate']
+        tosca_template_dict = self.get_tosca_from_url('https://raw.githubusercontent.com/qcdis-sdia/sdia-tosca/develop/examples/workflows.yaml')
         topology_template = tosca_template_dict['topology_template']
         node_templates = topology_template['node_templates']
-        tosca_template_path = self.get_tosca_template_path(parsed_json_message)
+        # tosca_template_path = self.get_tosca_template_path(parsed_json_message)
         tosca_service_is_up = ToscaHelper.service_is_up(sure_tosca_base_url)
         if tosca_service_is_up:
             # tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
@@ -63,10 +64,16 @@ class TestAWXService(unittest.TestCase):
 
 
     def get_request_message_from_url(self,url):
-        logger = logging.getLogger(__name__)
         with urllib.request.urlopen(
                 url) as stream:
             parsed_json_message = json.load(stream)
+        return parsed_json_message
+
+
+    def get_tosca_from_url(self,url):
+        with urllib.request.urlopen(
+                url) as stream:
+            parsed_json_message = yaml.load(stream)
         return parsed_json_message
 
     def get_request_message_from_file(self,path):
@@ -83,23 +90,27 @@ class TestAWXService(unittest.TestCase):
             yaml.dump(tosca_template_dict, outfile, default_flow_style=False)
         return tosca_template_path
 
-    def create_job_templates(self, tosca_node, awx,):
+    def create_job_templates(self, tosca_node, awx):
         if 'interfaces' in tosca_node:
-            operations = {}
             project_ids = []
+            operations = []
             interfaces = tosca_node['interfaces']
             for interface_name in interfaces:
                 for step_name in interfaces[interface_name]:
+                    operation = {}
                     step = interfaces[interface_name][step_name]
                     if 'inputs' in step and 'repository' in step['inputs']:
                         repository_url = step['inputs']['repository']
-                        operations['name'] = interface_name+'.'+step_name
+                        operation['name'] = interface_name+'.'+step_name
                         project_id = awx.create_project(project_name=repository_url, scm_url=repository_url,
                                                         scm_branch='master', scm_type='git')
-                        operations['project_id'] = project_id
+                        operation['project'] = project_id[0]
                         inventory = step['inputs']['inventory']
-                        inventory_id = awx.create_inventory(inventory_name=operations['name'],inventory=inventory)
-
+                        inventory_id = awx.create_inventory(inventory_name=operation['name'],inventory=inventory)
+                        operation['inventory'] = inventory_id
+                    if 'implementation' in interfaces[interface_name][step_name]:
+                        operation['implementation'] = interfaces[interface_name][step_name]['implementation']
+                        awx.create_job_template(operation)
         return project_ids
 
 

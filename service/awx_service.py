@@ -67,7 +67,7 @@ class AWXService:
         #     project_id = project['id']
         # return project_id
 
-    def create_inventory(self, inventory_name=None):
+    def create_inventory(self, inventory_name=None,inventory=None):
         body = {
                 'name': inventory_name,
                 'description': '',
@@ -78,7 +78,28 @@ class AWXService:
                 'insights_credential': None
         }
 
-        return self.post(body,'inventories')
+        inventory_id =  self.post(body,'inventories')
+        for hosts in inventory:
+            all = hosts['all']
+            if 'hosts' in all:
+                hosts = hosts['all']['hosts']
+                print(hosts)
+            if 'children' in all:
+                children = hosts['all']['children']
+                for role in children:
+                    print(child)
+
+        #     for role_name in hosts:
+        #         role = hosts[role_name]
+        #         for r in role:
+        #             print(r)
+        #         body = {
+        #             'name': '',
+        #             'description': '',
+        #             'enabled': True,
+        #             'instance_id': '',
+        #             'variables': ''
+        #         }
 
 
     def create_workflow(self, tosca_workflow, workflow_name):

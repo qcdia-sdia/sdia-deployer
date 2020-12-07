@@ -1,6 +1,6 @@
 {
   "owner": "user",
-  "creationDate": 1607342017445,
+  "creationDate": 1607344642184,
   "toscaTemplate": {
     "tosca_definitions_version": "tosca_simple_yaml_1_2",
     "topology_template": {
@@ -52,16 +52,46 @@
                 "inputs": {
                   "inventory": [
                     {
-                      "get_attribute": [
-                        "compute",
-                        "public_ip"
-                      ]
-                    },
-                    {
-                      "get_attribute": [
-                        "compute_1",
-                        "public_ip"
-                      ]
+                      "all": {
+                        "children": {
+                          "master": {
+                            "hosts": {
+                              "ansible_host": {
+                                "get_attribute": [
+                                  "compute",
+                                  "public_ip"
+                                ]
+                              },
+                              "ansible_python_interpreter": "/usr/bin/python3",
+                              "ansible_ssh_common_args": "\"-o StrictHostKeyChecking=no\"",
+                              "ansible_ssh_user": {
+                                "get_property": [
+                                  "compute",
+                                  "user_name"
+                                ]
+                              }
+                            }
+                          },
+                          "workers": {
+                            "hosts": {
+                              "ansible_host": {
+                                "get_attribute": [
+                                  "compute",
+                                  "public_ip"
+                                ]
+                              },
+                              "ansible_python_interpreter": "/usr/bin/python3",
+                              "ansible_ssh_common_args": "\"-o StrictHostKeyChecking=no\"",
+                              "ansible_ssh_user": {
+                                "get_property": [
+                                  "compute",
+                                  "user_name"
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
                     }
                   ],
                   "repository": "https://github.com/QCDIS/playbooks.git"
@@ -92,16 +122,46 @@
                 "inputs": {
                   "inventory": [
                     {
-                      "get_attribute": [
-                        "compute",
-                        "public_ip"
-                      ]
-                    },
-                    {
-                      "get_attribute": [
-                        "compute_1",
-                        "public_ip"
-                      ]
+                      "all": {
+                        "children": {
+                          "master": {
+                            "hosts": {
+                              "ansible_host": {
+                                "get_attribute": [
+                                  "compute",
+                                  "public_ip"
+                                ]
+                              },
+                              "ansible_python_interpreter": "/usr/bin/python3",
+                              "ansible_ssh_common_args": "\"-o StrictHostKeyChecking=no\"",
+                              "ansible_ssh_user": {
+                                "get_property": [
+                                  "compute",
+                                  "user_name"
+                                ]
+                              }
+                            }
+                          },
+                          "workers": {
+                            "hosts": {
+                              "ansible_host": {
+                                "get_attribute": [
+                                  "compute",
+                                  "public_ip"
+                                ]
+                              },
+                              "ansible_python_interpreter": "/usr/bin/python3",
+                              "ansible_ssh_common_args": "\"-o StrictHostKeyChecking=no\"",
+                              "ansible_ssh_user": {
+                                "get_property": [
+                                  "compute",
+                                  "user_name"
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
                     }
                   ],
                   "repository": "https://github.com/QCDIS/playbooks.git"
@@ -215,10 +275,10 @@
           "type": "tosca.nodes.QC.VM.topology",
           "attributes": {
             "credential": {
-              "auth_url": "https://some_oid_host:35357/v3",
+              "auth_url": "https://open_id_server:35357/v3",
               "cloud_provider_name": "CESGA",
               "identity_provider": "egi.eu",
-              "project_id": "some_os_project_id",
+              "project_id": "the_project_id",
               "protocol": "openid",
               "token": "the_token",
               "token_type": "v3oidcaccesstoken"

@@ -42,7 +42,8 @@ class TestAWXService(unittest.TestCase):
         # owner = parsed_json_message['owner']
         # tosca_file_name = 'tosca_template'
         # tosca_template_dict = parsed_json_message['toscaTemplate']
-        tosca_template_dict = self.get_tosca_from_url('https://raw.githubusercontent.com/qcdis-sdia/sdia-tosca/develop/examples/workflows.yaml')
+        # tosca_template_dict = self.get_tosca_from_url('https://raw.githubusercontent.com/qcdis-sdia/sdia-tosca/develop/examples/workflows.yaml')
+        tosca_template_dict = self.get_tosca_from_file('../../sdia-tosca/examples/workflows.yaml')
         topology_template = tosca_template_dict['topology_template']
         node_templates = topology_template['node_templates']
         # tosca_template_path = self.get_tosca_template_path(parsed_json_message)
@@ -54,7 +55,7 @@ class TestAWXService(unittest.TestCase):
             awx = AWXService(api_url=awx_api,username=awx_username,password=awx_password)
             for tosca_node_name in node_templates:
                 tosca_node = node_templates[tosca_node_name]
-                project_ids = self.create_job_templates(tosca_node, awx)
+                worfflow_steps = awx.create_worfflow_steps(tosca_node)
             # if workflows:
             #     for workflow_name in workflows:
             #         workflow = workflows[workflow_name]
@@ -90,28 +91,9 @@ class TestAWXService(unittest.TestCase):
             yaml.dump(tosca_template_dict, outfile, default_flow_style=False)
         return tosca_template_path
 
-    def create_job_templates(self, tosca_node, awx):
-        if 'interfaces' in tosca_node:
-            project_ids = []
-            operations = []
-            interfaces = tosca_node['interfaces']
-            for interface_name in interfaces:
-                for step_name in interfaces[interface_name]:
-                    operation = {}
-                    step = interfaces[interface_name][step_name]
-                    if 'inputs' in step and 'repository' in step['inputs']:
-                        repository_url = step['inputs']['repository']
-                        operation['name'] = interface_name+'.'+step_name
-                        project_id = awx.create_project(project_name=repository_url, scm_url=repository_url,
-                                                        scm_branch='master', scm_type='git')
-                        operation['project'] = project_id[0]
-                        inventory = step['inputs']['inventory']
-                        inventory_id = awx.create_inventory(inventory_name=operation['name'],inventory=inventory)
-                        operation['inventory'] = inventory_id
-                    if 'implementation' in interfaces[interface_name][step_name]:
-                        operation['implementation'] = interfaces[interface_name][step_name]['implementation']
-                        awx.create_job_template(operation)
-        return project_ids
+    def get_tosca_from_file(self, path):
+        with open(path) as json_file:
+            return yaml.load(json_file)
 
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import os
 import sys
 import urllib.request
@@ -7,14 +8,17 @@ import yaml
 from sure_tosca_client import Configuration, ApiClient, NodeTemplate
 from sure_tosca_client.api import default_api
 import networkx as nx
-import matplotlib.pyplot as plt
+from toscaparser.tosca_template import ToscaTemplate
 
 
 class ToscaHelper:
 
     def __init__(self, sure_tosca_base_url, tosca_template_path):
+        self.function_names = {'get_property':'properties','get_attribute':'attribute','get_input':'inputs'}
         self.sure_tosca_base_url = sure_tosca_base_url
         self.tosca_template_path = tosca_template_path
+
+        self.tosca_template_dict = self.get_tosca_from_file(tosca_template_path)
         self.tosca_client = self.init_sure_tosca_client(sure_tosca_base_url)
         self.doc_id = self.upload_tosca_template(tosca_template_path)
 
@@ -118,6 +122,45 @@ class ToscaHelper:
         if 'workflows' in tosca_template['topology_template']:
             return tosca_template['topology_template']['workflows']
 
+    def get_function_value(self,function):
+        target_node = self.tosca_template_dict['topology_template']['node_templates'][function['target']]
+        if self.function_names[function['name']] in target_node:
+            return target_node[self.function_names[function['name']]][function['value_name']]
+
+    @classmethod
+    def get_tosca_from_file(cls, path):
+        with open(path) as json_file:
+            return yaml.load(json_file)
+
+    def resolve_function_values(self, tosca_node):
+        functions = []
+        self.find_functions(tosca_node,functions=functions)
+        for function in functions:
+            value = self.get_function_value(function)
+            tosca_node = self.replace_value(tosca_node,function['name'],value)
+        return tosca_node
+
+    def replace_value(self,obj, key, replace_value):
+        for k, v in obj.items():
+            if isinstance(v, dict):
+                obj[k] = self.replace_value(v, key, replace_value)
+        if key in obj:
+            obj = replace_value
+        return obj
+
+    def find_functions(self,d,functions=None):
+        for k, v in d.items():
+            for function_name in self.function_names:
+                if function_name == k:
+                    function = {'name': function_name, 'target': d[function_name][0], 'value_name': d[function_name][1]}
+
+                    functions.append(function)
+            if isinstance(v, dict):
+                self.find_functions(v,functions=functions)
+        return functions
+
+
+
 
 def get_interface_types(node):
     interface_type_names = []
@@ -125,5 +168,3 @@ def get_interface_types(node):
         for interface in node.node_template.interfaces:
             interface_type_names.append(interface)
         return interface_type_names
-
-

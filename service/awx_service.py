@@ -171,40 +171,31 @@ class AWXService:
         return inventory_group_ids[0]
 
     def create_inventory_hosts(self, host, inventory_id=None,inventory_group_id=None):
-        inventory_hosts_ids = None
-        awx_hosts = self.get_resources('inventories/' + str(inventory_id) + '/hosts')
-        if awx_hosts:
-            if 'inventory_file' in host.vars:
-                host.vars.pop('inventory_file')
-            if 'inventory_dir' in host.vars:
-                host.vars.pop('inventory_dir')
-            if inventory_id:
-                body = {
-                    'name': host.address,
-                    'description': '',
-                    'inventory': inventory_id,
-                    'enabled': True,
-                    'instance_id': '',
-                    'variables': json.dumps(host.vars)
-                }
-
-
-                inventory_hosts_ids = []
-                for awx_host in awx_hosts:
-                    if awx_host['name'] == host.address:
-                        inventory_hosts_ids.append(awx_host['id'])
-                        return inventory_hosts_ids
-
-                inventory_hosts_ids = self.post(body, 'hosts')
-            if inventory_group_id:
-                body = {
-                    'name': host.address,
-                    'description': '',
-                    'enabled': True,
-                    'instance_id': '',
-                    'variables': json.dumps(host.vars)
-                }
-                # inventory_hosts_ids = self.post(body, 'inventories/'+str(inventory_id)+'/hosts')
+        if 'inventory_file' in host.vars:
+            host.vars.pop('inventory_file')
+        if 'inventory_dir' in host.vars:
+            host.vars.pop('inventory_dir')
+        inventory_hosts_ids = []
+        if inventory_id:
+            body = {
+                'name': host.address,
+                'description': '',
+                'inventory': inventory_id,
+                'enabled': True,
+                'instance_id': '',
+                'variables': json.dumps(host.vars)
+            }
+            inventory_hosts_ids = self.post(body, 'hosts')
+            return inventory_hosts_ids
+        if inventory_group_id:
+            body = {
+                'name': host.address,
+                'description': '',
+                'enabled': True,
+                'instance_id': '',
+                'variables': json.dumps(host.vars)
+            }
+            # inventory_hosts_ids = self.post(body, 'inventories/'+str(inventory_id)+'/hosts')
 
 
         return inventory_hosts_ids

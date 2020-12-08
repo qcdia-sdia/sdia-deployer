@@ -88,18 +88,17 @@ class AWXService:
                 'variables': '',
                 'insights_credential': None
         }
-        inventory_ids = self.post(body, 'inventories')
+        inventory_id = self.post(body, 'inventories')[0]
         for group_name in inventory_manager.groups:
             group = inventory_manager.groups[group_name]
             if group_name == 'all' or group_name == 'ungrouped':
                 for host in group.hosts:
-                    inventory_hosts_id = self.create_inventory_hosts(host,inventory_id=inventory_ids[0])
+                    inventory_hosts_id = self.create_inventory_hosts(host,inventory_id=inventory_id)
             else:
-                inventory_group_ids = self.create_inventory_group(group_name, group, inventory_ids[0])
+                inventory_group_ids = self.create_inventory_group(group_name, group, inventory_id)
                 for host in group.hosts:
                     inventory_hosts_id = self.create_inventory_hosts(host,inventory_group_id=inventory_group_ids[0])
-
-        return inventory_ids[0]
+        return inventory_id
 
     def create_workflow(self, tosca_workflow, workflow_name):
         description = ''
@@ -110,7 +109,6 @@ class AWXService:
             step = steps[step_name]
             target = step['target']
             activities = step[activities]
-            print(step)
         # now = datetime.datetime.now()
         # body = {
         #         'name': workflow_name+'_'+str(now),
@@ -143,7 +141,7 @@ class AWXService:
         ids = []
         if r.status_code == 201:
             id = r.json()['id']
-            ids.append(ids)
+            ids.append(id)
             return ids
         elif r.status_code == 400 and 'already exists' in r.text:
             r = self._session.get(self.api_url + '/'+api_path+'/?name=' + body['name'],headers=self.headers)
@@ -222,6 +220,14 @@ class AWXService:
 
 
     def create_job_template(self,operation):
+        job_templates = self.get_resources('job_templates')
+        for job in job_templates:
+            if job['name'] == operation['name'] and \
+                job['inventory'] == operation['inventory'] and \
+                job['project'] == operation['project'] and \
+                job['playbook'] == operation['implementation']:
+                    return [job['id']]
+
         body = {
             
                 'name': operation['name'],
@@ -262,6 +268,30 @@ class AWXService:
                 'webhook_credential': None
             }
         job_templates_ids = self.post(body,'job_templates')
+
         return job_templates_ids
 
 
+    def create_worfflow_steps(self, tosca_node):
+        if 'interfaces' in tosca_node:
+            workflow_steps = []
+            interfaces = tosca_node['interfaces']
+            for interface_name in interfaces:
+                for step_name in interfaces[interface_name]:
+                    workflow_step = {}
+                    step = interfaces[interface_name][step_name]
+                    if 'inputs' in step and 'repository' in step['inputs']:
+                        repository_url = step['inputs']['repository']
+                        workflow_step['name'] = interface_name+'.'+step_name
+                        project_id = self.create_project(project_name=repository_url, scm_url=repository_url,
+                                                        scm_branch='master', scm_type='git')
+                        workflow_step['project'] = project_id[0]
+                        inventory = step['inputs']['inventory']
+                        inventory_id = self.create_inventory(inventory_name=workflow_step['name'],inventory=inventory)
+                        workflow_step['inventory'] = inventory_id
+                    if 'implementation' in interfaces[interface_name][step_name]:
+                        workflow_step['implementation'] = interfaces[interface_name][step_name]['implementation']
+                        workflow_step['job_template'] =  self.create_job_template(workflow_step)[0]
+                    if workflow_step:
+                        workflow_steps.append(workflow_step)
+            return workflow_steps

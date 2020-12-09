@@ -140,14 +140,16 @@ class ToscaHelper:
         for function in functions:
             value = self.get_function_value(function)
             if value:
-                tosca_node = self.replace_value(tosca_node,function['name'],value)
+                tosca_node = self.replace_value(tosca_node,function,value)
         return tosca_node
 
-    def replace_value(self,obj, key, replace_value):
+    def replace_value(self,obj, function, replace_value):
         for k, v in obj.items():
             if isinstance(v, dict):
-                obj[k] = self.replace_value(v, key, replace_value)
-        if key in obj:
+                obj[k] = self.replace_value(v, function, replace_value)
+        if function['name'] in obj and \
+                obj[function['name']][0] == function['target'] and \
+                obj[function['name']][1] == function['value_name']:
             obj = replace_value
         return obj
 

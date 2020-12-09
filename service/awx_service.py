@@ -152,8 +152,7 @@ class AWXService:
                 ids.append(res['id'])
             return ids
         else:
-            print(body)
-            raise Exception(r.text)
+            raise Exception(r.text+'\nRequest Body: '+str(body))
 
 
 
@@ -168,7 +167,7 @@ class AWXService:
             'variables': json.dumps(group.vars)
         }
         inventory_group_ids = self.post(body,'inventories/'+str(inventory_id)+'/groups')
-        return inventory_group_ids[0]
+        return inventory_group_ids
 
     def create_inventory_hosts(self, host, inventory_id=None,inventory_group_id=None):
         if 'inventory_file' in host.vars:
@@ -195,9 +194,7 @@ class AWXService:
                 'instance_id': '',
                 'variables': json.dumps(host.vars)
             }
-            # inventory_hosts_ids = self.post(body, 'inventories/'+str(inventory_id)+'/hosts')
-
-
+            inventory_hosts_ids = self.post(body, 'groups/'+str(inventory_group_id)+'/hosts')
         return inventory_hosts_ids
 
     def get_resources(self, api_path):

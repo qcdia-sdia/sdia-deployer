@@ -14,7 +14,7 @@ from toscaparser.tosca_template import ToscaTemplate
 class ToscaHelper:
 
     def __init__(self, sure_tosca_base_url, tosca_template_path):
-        self.function_names = {'get_property':'properties','get_attribute':'attribute','get_input':'inputs'}
+        self.function_names = {'get_property':'properties','get_attribute':'attributes','get_input':'inputs'}
         self.sure_tosca_base_url = sure_tosca_base_url
         self.tosca_template_path = tosca_template_path
 
@@ -124,20 +124,23 @@ class ToscaHelper:
 
     def get_function_value(self,function):
         target_node = self.tosca_template_dict['topology_template']['node_templates'][function['target']]
-        if self.function_names[function['name']] in target_node:
-            return target_node[self.function_names[function['name']]][function['value_name']]
+        name = self.function_names[function['name']]
+        value_name = function['value_name']
+        if name in target_node:
+            return target_node[name][value_name]
 
     @classmethod
     def get_tosca_from_file(cls, path):
         with open(path) as json_file:
-            return yaml.load(json_file)
+            return yaml.safe_load(json_file)
 
     def resolve_function_values(self, tosca_node):
         functions = []
-        self.find_functions(tosca_node,functions=functions)
+        functions = self.find_functions(tosca_node,functions=functions)
         for function in functions:
             value = self.get_function_value(function)
-            tosca_node = self.replace_value(tosca_node,function['name'],value)
+            if value:
+                tosca_node = self.replace_value(tosca_node,function['name'],value)
         return tosca_node
 
     def replace_value(self,obj, key, replace_value):

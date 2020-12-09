@@ -1,5 +1,6 @@
 import datetime
 import tempfile
+import time
 
 import ansibleawx
 import awxkit
@@ -60,17 +61,8 @@ class AWXService:
                 'scm_update_cache_timeout': 0,
                 'allow_override': False
             }
+
         return self.post(body,'projects')
-        # r = self._session.post(self.api_url + '/projects/', data=json.dumps(body),headers=self.headers)
-        # project_id = None
-        # if r.status_code == 201:
-        #     project = r.json()
-        #     project_id = project['id']
-        # elif r.status_code == 400 and 'already exists' in r.text:
-        #     r = self._session.get(self.api_url + '/projects/?name='+project_name+'&scm_url='+scm_url, headers=self.headers)
-        #     project = r.json()['results'][0]
-        #     project_id = project['id']
-        # return project_id
 
     def create_inventory(self, inventory_name=None,inventory=None):
         loader = DataLoader()
@@ -143,15 +135,19 @@ class AWXService:
             id = r.json()['id']
             ids.append(id)
             return ids
+        elif r.status_code == 202:
+            resp = r.json()
+            ids.append(resp['id'])
+            return ids
         elif r.status_code == 400 and 'already exists' in r.text:
             r = self._session.get(self.api_url + '/'+api_path+'/?name=' + body['name'],headers=self.headers)
             results = r.json()['results']
-            # if len(results) > 1:
-            #     raise Exception('Got back more than one results for name: '+body['name'])
+
             for res in results:
                 ids.append(res['id'])
             return ids
         else:
+            Exception()
             raise Exception(r.text+'\nRequest Body: '+str(body))
 
 
@@ -255,7 +251,18 @@ class AWXService:
                 'webhook_service': None,
                 'webhook_credential': None
             }
-        job_templates_ids = self.post(body,'job_templates')
+
+
+        try:
+            job_templates_ids = self.post(body,'job_templates')
+        except Exception as ex:
+            if 'Playbook not found for project' in str(ex):
+                update_ids = self.update_project(operation['project'])
+                time.sleep(1)
+                job_templates_ids = self.post(body, 'job_templates')
+        return job_templates_ids
+
+
 
         return job_templates_ids
 
@@ -283,3 +290,8 @@ class AWXService:
                     if workflow_step:
                         workflow_steps.append(workflow_step)
             return workflow_steps
+
+    def update_project(self, project_id):
+        body = {}
+        resp = self.post(body,'projects/'+str(project_id)+'/update')
+        pass

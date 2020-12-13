@@ -258,7 +258,7 @@ class AWXService:
         except Exception as ex:
             if 'Playbook not found for project' in str(ex):
                 update_ids = self.update_project(operation['project'])
-                time.sleep(3)
+                time.sleep(4)
                 job_templates_ids = self.post(body, 'job_templates')
         return job_templates_ids
 

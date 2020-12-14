@@ -252,18 +252,21 @@ class AWXService:
                 'webhook_credential': None
             }
 
-
-        try:
-            job_templates_ids = self.post(body,'job_templates')
-        except Exception as ex:
-            if 'Playbook not found for project' in str(ex):
-                update_ids = self.update_project(operation['project'])
-                time.sleep(4)
-                job_templates_ids = self.post(body, 'job_templates')
-        return job_templates_ids
-
-
-
+        fail_count = 0
+        job_templates_ids = None
+        while fail_count<10:
+            try:
+                return self.post(body,'job_templates')
+            except Exception as ex:
+                if 'Playbook not found for project' in str(ex):
+                    fail_count += 1
+                    update_ids = self.update_project(operation['project'])
+                    time.sleep(1)
+                    return self.post(body, 'job_templates')
+                if fail_count >= 10:
+                    raise ex
+                else:
+                    raise ex
         return job_templates_ids
 
 

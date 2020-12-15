@@ -329,18 +329,17 @@ class AWXService:
                                                                          step_name=step_name)
                     if parent_node_ids:
                         if 'on_success' in activity:
-                            workflow_node_ids = self.create_workflow_node(parent_id=parent_node_ids[0],
-                                                                      children=activity['on_success'],
-                                                                      label='on_success',
-                                                                      steps=steps,
-                                                                      topology_template_workflow_steps=topology_template_workflow_steps)
+                            label = 'on_success'
                         if 'on_failure' in activity:
-                            workflow_node_ids = self.create_workflow_node(parent_id=parent_node_ids[0],
-                                                                          children=activity['on_failure'],
-                                                                          label='on_failure',
+                            label = 'on_failure'
+                        children=activity['label']
+                        if isinstance(children, list):
+                            for child in children:
+                                workflow_node_ids = self.create_workflow_node(parent_id=parent_node_ids[0],
+                                                                          children=child,
+                                                                          label=label,
                                                                           steps=steps,
                                                                           topology_template_workflow_steps=topology_template_workflow_steps)
-
         # workflow_job_template_node_ids = []
         # for step_name in steps:
         #     step = steps[step_name]
@@ -396,57 +395,54 @@ class AWXService:
         workflow_job_template_node_ids = self.post(body,'workflow_job_templates/'+str(workflow_id)+'/workflow_nodes')
         return workflow_job_template_node_ids
 
-    def create_workflow_node(self, parent_id, children,label,steps,topology_template_workflow_steps,workflow_job_template_nodes_ids=None):
-        if not workflow_job_template_nodes_ids:
-            workflow_job_template_nodes_ids=[]
-        if isinstance(children, list):
-            for child in children:
-                self.create_workflow_node(parent_id, child,label,steps,topology_template_workflow_steps,workflow_job_template_nodes_ids=workflow_job_template_nodes_ids)
-        elif isinstance(children, str):
-            child = children
-            path = 'workflow_job_template_nodes/' + str(parent_id) + '/'
-            if label == 'on_success':
-                path += 'success_nodes'
-            if label == 'on_failure':
-                path += 'failure_nodes'
-            activities = steps[child]['activities']
-            for activity in activities:
-                parent_node_ids = None
-                if 'call_operation' in activity:
-                    call_operation = activity['call_operation']
-                    body = {
-                        'extra_data': {},
-                        'inventory': None,
-                        'scm_branch': '',
-                        'job_type': None,
-                        'job_tags': '',
-                        'skip_tags': '',
-                        'limit': '',
-                        'diff_mode': None,
-                        'verbosity': None,
-                        'unified_job_template': topology_template_workflow_steps[call_operation]['job_template'],
-                        'all_parents_must_converge': True,
-                        'identifier': child
-                    }
-                    parent_node_ids = self.post(body,path)
-                    if parent_node_ids:
-                        workflow_job_template_nodes_ids += parent_node_ids
-                if parent_node_ids:
-                    workflow_node_ids = None
-                    if 'on_success' in activity:
+    def create_workflow_node(self, parent_id, child,label,steps,topology_template_workflow_steps,
+                             workflow_job_template_nodes_ids=None):
+        path = 'workflow_job_template_nodes/' + str(parent_id) + '/'
+        if label == 'on_success':
+            path += 'success_nodes'
+        if label == 'on_failure':
+            path += 'failure_nodes'
+        activities = steps[child]['activities']
+        for activity in activities:
+            if 'call_operation' in activity:
+                call_operation = activity['call_operation']
+                body = {
+                    'extra_data': {},
+                    'inventory': None,
+                    'scm_branch': '',
+                    'job_type': None,
+                    'job_tags': '',
+                    'skip_tags': '',
+                    'limit': '',
+                    'diff_mode': None,
+                    'verbosity': None,
+                    'unified_job_template': topology_template_workflow_steps[call_operation]['job_template'],
+                    'all_parents_must_converge': True,
+                    'identifier': child
+                }
+
+                parent_node_ids = self.post(body,path)
+
+                if 'on_success' in activity:
+                    label = 'on_success'
+                if 'on_failure' in activity:
+                    label = 'on_failure'
+                children = activity[label]
+                if isinstance(children, list):
+                    for child in children:
                         workflow_node_ids = self.create_workflow_node(parent_id=parent_node_ids[0],
-                                                                  children=activity['on_success'],
-                                                                  label='on_success',
-                                                                  steps=steps,
-                                                                  topology_template_workflow_steps=topology_template_workflow_steps)
-                    if 'on_failure' in activity:
-                        workflow_node_ids = self.create_workflow_node(parent_id=parent_node_ids[0],
-                                                                      children=activity['on_failure'],
-                                                                      label='on_failure',
-                                                                      steps=steps,
-                                                                      topology_template_workflow_steps=topology_template_workflow_steps)
-                    workflow_job_template_nodes_ids += workflow_node_ids
-        return workflow_job_template_nodes_ids
+                                                                        child=child,
+                                                                        label=label,
+                                                                        steps=steps,
+                                                                        topology_template_workflow_steps=topology_template_workflow_steps)
+                if isinstance(children, str):
+                    child = children
+                    workflow_node_ids = self.create_workflow_node(parent_id=parent_node_ids[0],
+                                                                    child=child,
+                                                                    label=label,
+                                                                    steps=steps,
+                                                                    topology_template_workflow_steps=topology_template_workflow_steps)
+        return None
 
 
 

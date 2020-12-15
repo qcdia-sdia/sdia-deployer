@@ -145,6 +145,10 @@ class ToscaHelper:
 
     def replace_value(self,obj, function, replace_value):
         for k, v in obj.items():
+            if isinstance(v, list):
+                for elem in v:
+                    if isinstance(elem, dict):
+                        self.replace_value(elem, function, replace_value)
             if isinstance(v, dict):
                 obj[k] = self.replace_value(v, function, replace_value)
         if function['name'] in obj and \

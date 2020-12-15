@@ -254,16 +254,16 @@ class AWXService:
 
         fail_count = 0
         job_templates_ids = None
-        while fail_count<10:
+        while fail_count<20:
             try:
                 return self.post(body,'job_templates')
             except Exception as ex:
                 if 'Playbook not found for project' in str(ex):
                     fail_count += 1
                     update_ids = self.update_project(operation['project'])
-                    time.sleep(1)
+                    time.sleep(2)
                     return self.post(body, 'job_templates')
-                if fail_count >= 10:
+                if fail_count >= 20:
                     raise ex
                 else:
                     raise ex

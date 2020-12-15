@@ -115,13 +115,9 @@ class AWXService:
 
         r = self._session.post(self.api_url + '/' + api_path + '/', data=json.dumps(body), headers=self.headers)
         ids = []
-        if r.status_code == 201:
+        if r.status_code == 201 or r.status_code == 202 or r.status_code == 204:
             id = r.json()['id']
             ids.append(id)
-            return ids
-        elif r.status_code == 202:
-            resp = r.json()
-            ids.append(resp['id'])
             return ids
         elif r.status_code == 400 and 'already exists' in r.text:
             if 'name' in body:
@@ -134,8 +130,7 @@ class AWXService:
                 ids.append(res['id'])
             return ids
         else:
-            Exception()
-            raise Exception(r.text + '\nRequest Body: ' + str(body))
+            raise Exception('Response Code:'+ str(r.status_code) +' '+r.text + '\nRequest Body: ' + str(body))
 
     def create_inventory_group(self, group_name, group, inventory_id):
         if 'inventory_file' in group.vars:
@@ -385,7 +380,7 @@ class AWXService:
                 child_id = None
                 res = self.get_resources('workflow_job_template_nodes/?identifier=' + child)
                 if res:
-                    child_id = res[0][id]
+                    child_id = res[0]['id']
                 body = {
                     'id': child_id,
                     'extra_data': {},

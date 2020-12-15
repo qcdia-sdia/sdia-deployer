@@ -158,8 +158,11 @@ class ToscaHelper:
             for function_name in self.function_names:
                 if function_name == k:
                     function = {'name': function_name, 'target': d[function_name][0], 'value_name': d[function_name][1]}
-
                     functions.append(function)
+            if isinstance(v, list):
+                for elem in v:
+                    if isinstance(elem, dict):
+                        self.find_functions(elem, functions=functions)
             if isinstance(v, dict):
                 self.find_functions(v,functions=functions)
         return functions

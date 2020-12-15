@@ -116,10 +116,11 @@ class AWXService:
         r = self._session.post(self.api_url + '/' + api_path + '/', data=json.dumps(body), headers=self.headers)
         ids = []
         if r.status_code == 201 or r.status_code == 202 or r.status_code == 204:
-            json_resp = r.json()
-            if 'id' in json_resp:
-                id = json_resp['id']
-                ids.append(id)
+            if r.text:
+                json_resp = r.json()
+                if 'id' in json_resp:
+                    id = json_resp['id']
+                    ids.append(id)
             return ids
         elif r.status_code == 400 and 'already exists' in r.text:
             if 'name' in body:
@@ -368,8 +369,7 @@ class AWXService:
         workflow_job_template_node_ids = self.post(body,'workflow_job_templates/'+str(workflow_id)+'/workflow_nodes')
         return workflow_job_template_node_ids
 
-    def create_workflow_nodes(self, parent_id, child, label, steps, topology_template_workflow_steps,
-                              workflow_job_template_nodes_ids=None):
+    def create_workflow_nodes(self, parent_id, child, label, steps, topology_template_workflow_steps):
         path = 'workflow_job_template_nodes/' + str(parent_id) + '/'
         if label == 'on_success':
             path += 'success_nodes'
@@ -379,28 +379,10 @@ class AWXService:
         for activity in activities:
             if 'call_operation' in activity:
                 call_operation = activity['call_operation']
-                child_id = None
-                res = self.get_resources('workflow_job_template_nodes/?identifier=' + child)
-                if res:
-                    child_id = res[0]['id']
-                body = {
-                    'id': child_id,
-                    'extra_data': {},
-                    'inventory': None,
-                    'scm_branch': '',
-                    'job_type': None,
-                    'job_tags': '',
-                    'skip_tags': '',
-                    'limit': '',
-                    'diff_mode': None,
-                    'verbosity': None,
-                    'unified_job_template': topology_template_workflow_steps[call_operation]['job_template'],
-                    'all_parents_must_converge': True,
-                    'identifier': child
-                }
-                child_ids = self.post(body,path)
-                if child_ids:
-                    child_id = child_ids[0]
+                child_id = self.add_child_node(identifier=child,
+                                               unified_job_template=topology_template_workflow_steps[call_operation]['job_template'],
+                                               path=path)
+
                 print('-----------------------------')
                 print('parent: '+str(call_operation))
                 label = None
@@ -411,14 +393,14 @@ class AWXService:
                 if label in activity:
                     children = activity[label]
                     print(' children: '+str(children))
-                    if isinstance(children, list) and child_ids:
+                    if isinstance(children, list) and child_id:
                         for child in children:
                             self.create_workflow_nodes(parent_id=child_id,
                                                        child=child,
                                                        label=label,
                                                        steps=steps,
                                                        topology_template_workflow_steps=topology_template_workflow_steps)
-                    if isinstance(children, str) and child_ids:
+                    if isinstance(children, str) and child_id:
                         child = children
                         self.create_workflow_nodes(parent_id=child_id,
                                                    child=child,
@@ -426,6 +408,32 @@ class AWXService:
                                                    steps=steps,
                                                    topology_template_workflow_steps=topology_template_workflow_steps)
         return None
+
+    def add_child_node(self, identifier, unified_job_template, path):
+        res = self.get_resources('workflow_job_template_nodes/?identifier=' + identifier)
+        child_id = None
+        if res:
+            child_id = res[0]['id']
+
+        body = {
+            'id': child_id,
+            'extra_data': {},
+            'inventory': None,
+            'scm_branch': '',
+            'job_type': None,
+            'job_tags': '',
+            'skip_tags': '',
+            'limit': '',
+            'diff_mode': None,
+            'verbosity': None,
+            'unified_job_template': unified_job_template,
+            'all_parents_must_converge': True,
+            'identifier': identifier
+        }
+        res = self.post(body, path)
+        if not child_id and res:
+            child_id = res[0]
+        return child_id
 
 
 

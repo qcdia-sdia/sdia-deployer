@@ -15,6 +15,7 @@ from time import sleep
 import pika
 import yaml
 
+from service.awx_service import AWXService
 from service.deploy_service import DeployService
 from service.tosca_helper import ToscaHelper
 
@@ -32,7 +33,7 @@ done = False
 # logger.handler_set = True
 
 
-def init_chanel(rabbitmq_host, queue_name):
+def init_channel(rabbitmq_host, queue_name):
     connection = pika.BlockingConnection(pika.ConnectionParameters(host=rabbitmq_host))
     channel = connection.channel()
     channel.queue_declare(queue=queue_name)
@@ -69,7 +70,7 @@ def save_tosca_template(tosca_template_dict):
     return  tosca_template_path
 
 
-def software_deployment(tosca_template_path=None,tosca_template_dict=None):
+def semaphore(tosca_template_path=None, tosca_template_dict=None):
     tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
     nodes = tosca_helper.get_application_nodes()
     # nodes = tosca_helper.get_deployment_node_pipeline()
@@ -99,6 +100,31 @@ def software_deployment(tosca_template_path=None,tosca_template_dict=None):
         raise
 
 
+def awx(tosca_template_path=None, tosca_template_dict=None):
+    tosca_service_is_up = ToscaHelper.service_is_up(sure_tosca_base_url)
+    if tosca_service_is_up:
+        tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
+        node_templates = tosca_template_dict['topology_template']['node_templates']
+        awx = AWXService(api_url=awx_base_url, username=awx_username, password=awx_password)
+        topology_template_workflow_steps = {}
+        for tosca_node_name in node_templates:
+            tosca_node = node_templates[tosca_node_name]
+            tosca_node = tosca_helper.resolve_function_values(tosca_node)
+            node_workflow_steps = awx.create_workflow_steps(tosca_node)
+            topology_template_workflow_steps.update(node_workflow_steps)
+        workflows = tosca_helper.get_workflows()
+        if workflows:
+            for workflow_name in workflows:
+                workflow = workflows[workflow_name]
+                description = None
+                if 'description' in workflow:
+                    description = workflow['description']
+                wf_ids = awx.create_workflow(description=description, workflow_name=workflow_name)
+                workflow_node_ids = awx.create_dag(workflow_id=wf_ids[0],
+                                                   tosca_workflow=workflow,
+                                                   topology_template_workflow_steps=topology_template_workflow_steps)
+
+
 def handle_delivery(message):
     logger.info("Got: " + str(message))
     try:
@@ -111,8 +137,10 @@ def handle_delivery(message):
     tosca_template_dict = parsed_json_message['toscaTemplate']
 
     tosca_template_path = save_tosca_template(tosca_template_dict)
+    if 'workflows' in tosca_template_dict['topology_template']:
+        return awx(tosca_template_dict=tosca_template_dict, tosca_template_path=tosca_template_path)
 
-    return software_deployment(tosca_template_dict=tosca_template_dict,tosca_template_path=tosca_template_path)
+    return semaphore(tosca_template_dict=tosca_template_dict, tosca_template_path=tosca_template_path)
 
 
 def threaded_function(args):
@@ -134,13 +162,18 @@ if __name__ == "__main__":
     semaphore_username = config['semaphore']['username']
     semaphore_password = config['semaphore']['password']
 
+    awx_base_url = config['awx']['base_url']
+    awx_username = config['awx']['username']
+    awx_password = config['awx']['password']
+
+
     rabbitmq_host = config['message_broker']['host']
     queue_name = config['message_broker']['queue_name']
 
     logger.info('Properties sure_tosca_base_url: ' + sure_tosca_base_url + ', semaphore_base_url: ' + semaphore_base_url
                 + ', rabbitmq_host: ' + rabbitmq_host+ ', queue_name: '+queue_name)
 
-    channel, connection = init_chanel(rabbitmq_host, queue_name)
+    channel, connection = init_channel(rabbitmq_host, queue_name)
 
     logger.info("Awaiting RPC requests")
     try:

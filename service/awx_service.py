@@ -5,6 +5,7 @@ import time
 import uuid
 from base64 import b64encode
 import networkx as nx
+import logging
 import matplotlib.pyplot as plt
 import requests
 import yaml
@@ -12,7 +13,7 @@ import ansible.inventory.manager
 from ansible.inventory.manager import InventoryManager
 from ansible.parsing.dataloader import DataLoader
 import tower_cli.exceptions
-
+logger = logging.getLogger(__name__)
 
 class AWXService:
 
@@ -237,16 +238,17 @@ class AWXService:
 
         fail_count = 0
         job_templates_ids = None
-        while fail_count < 30:
+        while fail_count < 40:
             try:
                 return self.post(body, 'job_templates')
             except Exception as ex:
                 if 'Playbook not found for project' in str(ex):
                     fail_count += 1
+                    time.sleep(5)
+                    logger.warning(str(ex) + '. Retrying to update project fail_count: '+str(fail_count))
                     update_ids = self.update_project(operation[operation_name]['project'])
-                    time.sleep(3)
                     return self.post(body, 'job_templates')
-                if fail_count >= 30:
+                if fail_count >= 40:
                     raise ex
                 else:
                     raise ex
@@ -382,9 +384,6 @@ class AWXService:
                 child_id = self.add_child_node(identifier=child,
                                                unified_job_template=topology_template_workflow_steps[call_operation]['job_template'],
                                                path=path)
-
-                print('-----------------------------')
-                print('parent: '+str(call_operation))
                 label = None
                 if 'on_success' in activity:
                     label = 'on_success'
@@ -392,7 +391,6 @@ class AWXService:
                     label = 'on_failure'
                 if label in activity:
                     children = activity[label]
-                    print(' children: '+str(children))
                     if isinstance(children, list) and child_id:
                         for child in children:
                             self.create_workflow_nodes(parent_id=child_id,
@@ -434,6 +432,20 @@ class AWXService:
         if not child_id and res:
             child_id = res[0]
         return child_id
+
+    def launch(self, wf_id):
+        path = 'workflow_job_templates/'+str(wf_id)+'/launch'
+        body = {
+            'ask_limit_on_launch': False,
+            'ask_scm_branch_on_launch': False
+        }
+        wf_job_ids = self.post(body, path)
+        return wf_job_ids
+
+    def get_workflow_nodes(self, launched_id):
+        path = 'workflow_jobs/'+str(launched_id)+'/workflow_nodes'
+        workflow_nodes = self.get_resources(path)
+        return workflow_nodes
 
 
 

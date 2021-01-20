@@ -30,11 +30,11 @@ services:
       - "3000:3000"
     depends_on:
       - mysql
-#
-#  sure-tosca:
-#    image: qcdis/sure-tosca
-#    ports:
-#      - "8081:8081"
+
+  sure-tosca:
+    image: qcdis/sure-tosca
+    ports:
+      - "8081:8081"
 #
 #
 #  compute:

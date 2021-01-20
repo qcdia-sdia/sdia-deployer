@@ -68,13 +68,6 @@ class TestAWXService(unittest.TestCase):
                     for wf_id in wf_ids:
                         wf_job_ids = awx.launch(wf_id)
                         launched_ids += wf_job_ids
-                    for launched_id in launched_ids:
-                        workflow_nodes = awx.get_workflow_nodes(launched_id)
-                        for topology_template_workflow_step in topology_template_workflow_steps:
-                            for workflow_node in workflow_nodes:
-                                if workflow_node['summary_fields']['unified_job_template']['name'] == \
-                                    topology_template_workflow_step['call_operation']:
-                                    print(workflow_node)
 
 
 

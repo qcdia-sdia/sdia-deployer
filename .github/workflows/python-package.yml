@@ -21,6 +21,10 @@ jobs:
     - uses: actions/checkout@v2
     - name: Start containers
       run: docker-compose -f "docker-compose/docker-compose.yml" up -d --build
+    - name: Sleep for 240 seconds
+      uses: jakejarvis/wait-action@master
+      with:
+        time: '240s'
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:

@@ -30,7 +30,7 @@ services:
       - "3000:3000"
     depends_on:
       - mysql
-#
+
   sure-tosca:
     image: qcdis/sure-tosca
     ports:

@@ -109,20 +109,29 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
         topology_template_workflow_steps = {}
         for tosca_node_name in node_templates:
             tosca_node = node_templates[tosca_node_name]
+            logger.info('Resolving function values for: '+tosca_node_name)
             tosca_node = tosca_helper.resolve_function_values(tosca_node)
+            logger.info('Creating workflow steps for: ' + tosca_node_name)
             node_workflow_steps = awx.create_workflow_steps(tosca_node)
             topology_template_workflow_steps.update(node_workflow_steps)
         workflows = tosca_helper.get_workflows()
         if workflows:
+            launched_ids = []
             for workflow_name in workflows:
                 workflow = workflows[workflow_name]
                 description = None
                 if 'description' in workflow:
                     description = workflow['description']
                 wf_ids = awx.create_workflow(description=description, workflow_name=workflow_name)
+                logger.info('Created workflow with ID: ' + str(wf_ids[0]))
                 workflow_node_ids = awx.create_dag(workflow_id=wf_ids[0],
                                                    tosca_workflow=workflow,
                                                    topology_template_workflow_steps=topology_template_workflow_steps)
+                logger.info('Added nodes to workflow')
+                for wf_id in wf_ids:
+                    wf_job_ids = awx.launch(wf_id)
+                    launched_ids += wf_job_ids
+
 
 
 def handle_delivery(message):

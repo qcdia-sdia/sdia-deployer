@@ -86,7 +86,7 @@ class TestAWXService(unittest.TestCase):
         # tosca_template_dict = parsed_json_message['toscaTemplate']
         tosca_file_path = '../../sdia-tosca/examples/workflows_with_attributes.yaml'
         if os.path.isfile(tosca_file_path):
-            tosca_template_dict = ToscaHelper.get_tosca_from_file('../../sdia-tosca/examples/workflows_with_attributes.yaml')
+            tosca_template_dict = ToscaHelper.get_tosca_from_file(tosca_file_path)
         else:
             tosca_template_dict = self.get_tosca_from_url('https://raw.githubusercontent.com/qcdis-sdia/sdia-tosca/develop/examples/workflows_with_attributes.yaml')
 

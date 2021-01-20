@@ -30,7 +30,7 @@ import logging
 from service.tosca_helper import ToscaHelper
 
 sure_tosca_base_url = 'http://localhost:8081/tosca-sure/1.0.0'
-awx_base_url = 'http://localhost/api/v2'
+awx_base_url = 'http://localhost:8052/api/v2'
 awx_username = 'admin'
 awx_password = 'password'
 logger = logging.getLogger(__name__)

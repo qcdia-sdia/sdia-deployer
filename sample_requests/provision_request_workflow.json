@@ -1,6 +1,6 @@
 {
   "owner": "user",
-  "creationDate": 1607342017445,
+  "creationDate": 1607347927111,
   "toscaTemplate": {
     "tosca_definitions_version": "tosca_simple_yaml_1_2",
     "topology_template": {
@@ -50,60 +50,144 @@
               "configure": {
                 "implementation": "k8s/k8s_dashboard.yaml",
                 "inputs": {
-                  "inventory": [
-                    {
-                      "get_attribute": [
-                        "compute",
-                        "public_ip"
-                      ]
-                    },
-                    {
-                      "get_attribute": [
-                        "compute_1",
-                        "public_ip"
-                      ]
+                  "inventory": {
+                    "all": {
+                      "children": {
+                        "master": {
+                          "hosts": {
+                            "ansible_host": {
+                              "get_attribute": [
+                                "compute",
+                                "public_ip"
+                              ]
+                            },
+                            "ansible_python_interpreter": "/usr/bin/python3",
+                            "ansible_ssh_common_args": "\"-o StrictHostKeyChecking=no\"",
+                            "ansible_ssh_user": {
+                              "get_property": [
+                                "compute",
+                                "user_name"
+                              ]
+                            }
+                          }
+                        },
+                        "workers": {
+                          "hosts": {
+                            "ansible_host": {
+                              "get_attribute": [
+                                "compute_1",
+                                "public_ip"
+                              ]
+                            },
+                            "ansible_python_interpreter": "/usr/bin/python3",
+                            "ansible_ssh_common_args": "\"-o StrictHostKeyChecking=no\"",
+                            "ansible_ssh_user": {
+                              "get_property": [
+                                "compute",
+                                "user_name"
+                              ]
+                            }
+                          }
+                        }
+                      }
                     }
-                  ],
+                  },
                   "repository": "https://github.com/QCDIS/playbooks.git"
                 }
               },
               "create": {
                 "implementation": "k8s/install_k8s.yaml",
                 "inputs": {
-                  "inventory": [
-                    {
-                      "get_attribute": [
-                        "compute",
-                        "public_ip"
-                      ]
-                    },
-                    {
-                      "get_attribute": [
-                        "compute_1",
-                        "public_ip"
-                      ]
+                  "inventory": {
+                    "all": {
+                      "children": {
+                        "master": {
+                          "hosts": {
+                            "ansible_host": {
+                              "get_attribute": [
+                                "compute",
+                                "public_ip"
+                              ]
+                            },
+                            "ansible_python_interpreter": "/usr/bin/python3",
+                            "ansible_ssh_common_args": "\"-o StrictHostKeyChecking=no\"",
+                            "ansible_ssh_user": {
+                              "get_property": [
+                                "compute",
+                                "user_name"
+                              ]
+                            }
+                          }
+                        },
+                        "workers": {
+                          "hosts": {
+                            "ansible_host": {
+                              "get_attribute": [
+                                "compute_1",
+                                "public_ip"
+                              ]
+                            },
+                            "ansible_python_interpreter": "/usr/bin/python3",
+                            "ansible_ssh_common_args": "\"-o StrictHostKeyChecking=no\"",
+                            "ansible_ssh_user": {
+                              "get_property": [
+                                "compute",
+                                "user_name"
+                              ]
+                            }
+                          }
+                        }
+                      }
                     }
-                  ],
+                  },
                   "repository": "https://github.com/QCDIS/playbooks.git"
                 }
               },
               "delete": {
                 "implementation": "k8s/k8s_delete.yaml",
                 "inputs": {
-                  "inventory": [
-                    {
-                      "get_attribute": [
-                        "compute",
-                        "public_ip"
-                      ]
-                    },
-                    {
-                      "get_attribute": [
-                        "compute_1",
-                        "public_ip"
-                      ]
+                  "inventory": {
+                    "all": {
+                      "children": {
+                        "master": {
+                          "hosts": {
+                            "ansible_host": {
+                              "get_attribute": [
+                                "compute",
+                                "public_ip"
+                              ]
+                            },
+                            "ansible_python_interpreter": "/usr/bin/python3",
+                            "ansible_ssh_common_args": "\"-o StrictHostKeyChecking=no\"",
+                            "ansible_ssh_user": {
+                              "get_property": [
+                                "compute",
+                                "user_name"
+                              ]
+                            }
+                          }
+                        },
+                        "workers": {
+                          "hosts": {
+                            "ansible_host": {
+                              "get_attribute": [
+                                "compute_1",
+                                "public_ip"
+                              ]
+                            },
+                            "ansible_python_interpreter": "/usr/bin/python3",
+                            "ansible_ssh_common_args": "\"-o StrictHostKeyChecking=no\"",
+                            "ansible_ssh_user": {
+                              "get_property": [
+                                "compute",
+                                "user_name"
+                              ]
+                            }
+                          }
+                        }
+                      }
                     }
-                  ],
+                  },
                   "repository": "https://github.com/QCDIS/playbooks.git"
                 }
               }
@@ -137,54 +221,78 @@
               "create": {
                 "implementation": "openstack/server/create_vm.yaml",
                 "inputs": {
-                  "inventory": [
-                    "localhost"
-                  ],
+                  "inventory": {
+                    "all": {
+                      "hosts": {
+                        "ansible_host": "localhosts"
+                      }
+                    }
+                  },
                   "repository": "https://github.com/QCDIS/playbooks.git"
                 }
               },
               "create_key": {
                 "implementation": "openstack/info/create_key.yaml",
                 "inputs": {
-                  "inventory": [
-                    "localhost"
-                  ],
+                  "inventory": {
+                    "all": {
+                      "hosts": {
+                        "ansible_host": "localhosts"
+                      }
+                    }
+                  },
                   "repository": "https://github.com/QCDIS/playbooks.git"
                 }
               },
               "create_user": {
                 "implementation": "create_user.yaml",
                 "inputs": {
-                  "inventory": [
-                    "localhost"
-                  ],
+                  "inventory": {
+                    "all": {
+                      "hosts": {
+                        "ansible_host": "localhosts"
+                      }
+                    }
+                  },
                   "repository": "https://github.com/QCDIS/playbooks.git"
                 }
               },
               "create_user_key_pair": {
                 "implementation": "create_user_key_pair.yaml",
                 "inputs": {
-                  "inventory": [
-                    "localhost"
-                  ],
+                  "inventory": {
+                    "all": {
+                      "hosts": {
+                        "ansible_host": "localhosts"
+                      }
+                    }
+                  },
                   "repository": "https://github.com/QCDIS/playbooks.git"
                 }
               },
               "install_requirements": {
                 "implementation": "openstack/install_requirements.yaml",
                 "inputs": {
-                  "inventory": [
-                    "localhost"
-                  ],
+                  "inventory": {
+                    "all": {
+                      "hosts": {
+                        "ansible_host": "localhosts"
+                      }
+                    }
+                  },
                   "repository": "https://github.com/QCDIS/playbooks.git"
                 }
               },
               "select_image": {
                 "implementation": "openstack/info/get_images.yaml",
                 "inputs": {
-                  "inventory": [
-                    "localhost"
-                  ],
+                  "inventory": {
+                    "all": {
+                      "hosts": {
+                        "ansible_host": "localhosts"
+                      }
+                    }
+                  },
                   "os": "Ubuntu 18.04",
                   "repository": "https://github.com/QCDIS/playbooks.git"
                 }
@@ -193,9 +301,13 @@
                 "implementation": "openstack/info/get_inst_flavors.yaml",
                 "inputs": {
                   "disk_size": "10000 MB",
-                  "inventory": [
-                    "localhost"
-                  ],
+                  "inventory": {
+                    "all": {
+                      "hosts": {
+                        "ansible_host": "localhosts"
+                      }
+                    }
+                  },
                   "mem_size": "1000 MB",
                   "num_cores": 1,
                   "repository": "https://github.com/QCDIS/playbooks.git"
@@ -204,9 +316,13 @@
               "select_network": {
                 "implementation": "openstack/info/get_networks.yaml",
                 "inputs": {
-                  "inventory": [
-                    "localhost"
-                  ],
+                  "inventory": {
+                    "all": {
+                      "hosts": {
+                        "ansible_host": "localhosts"
+                      }
+                    }
+                  },
                   "repository": "https://github.com/QCDIS/playbooks.git"
                 }
               }
@@ -215,10 +331,10 @@
           "type": "tosca.nodes.QC.VM.topology",
           "attributes": {
             "credential": {
-              "auth_url": "https://some_oid_host:35357/v3",
+              "auth_url": "https://the_open_id_server:35357/v3",
               "cloud_provider_name": "CESGA",
               "identity_provider": "egi.eu",
-              "project_id": "some_os_project_id",
+              "project_id": "the_project_id",
               "protocol": "openid",
               "token": "the_token",
               "token_type": "v3oidcaccesstoken"

@@ -244,7 +244,7 @@ class AWXService:
             except Exception as ex:
                 if 'Playbook not found for project' in str(ex):
                     fail_count += 1
-                    time.sleep(6)
+                    time.sleep(6.5)
                     logger.warning(str(ex) + '. Retrying to update project fail_count: '+str(fail_count))
                     update_ids = self.update_project(operation[operation_name]['project'])
                 elif fail_count >= 60:

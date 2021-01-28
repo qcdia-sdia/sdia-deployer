@@ -1,6 +1,8 @@
 import json
 import logging
 
+import yaml
+
 from service import tosca_helper
 from service.ansible_service import AnsibleService
 
@@ -144,6 +146,7 @@ class DeployService:
 
         k8s_dashboard_token = None
         k8s_services = None
+        k8s_conf = None
         if task_outputs:
             for task_output_key in task_outputs:
                 task_output = task_outputs[task_output_key]
@@ -151,14 +154,21 @@ class DeployService:
                     k8s_dashboard_token = self.parse_ansible_var('k8s_dashboard_token', task_output)
                 if not k8s_services:
                     k8s_services = self.parse_ansible_var('k8s_services', task_output)
-                if k8s_services and k8s_dashboard_token:
-                    credential = {'token_type': 'k8s_dashboard_token'}
+                if not k8s_conf:
+                    k8s_conf = self.parse_ansible_var('config_out', task_output)
+                if k8s_services and k8s_dashboard_token and k8s_conf:
+                    credential = {'token_type' : 'k8s_dashboard_token'}
                     credential['token'] = self.get_dashboard_token(k8s_dashboard_token)
                     tokens.append(credential)
 
                     service_port = self.get_service_port(k8s_services, 'kubernetes-dashboard', 'nodePort')
                     dashboard_url = 'https://' + self.master_ip + ':' + str(service_port)
                     attributes['dashboard_url'] = dashboard_url
+                    if 'stdout' in k8s_conf:
+                        dict = yaml.load(k8s_conf.stdout)
+                        attributes['config'] = dict
+                    else:
+                        attributes['config'] = k8s_conf
                     logger.info('source.node_template.attributes: ' + str(attributes))
             # raise Exception(
             #     'Did not find k8s_services and/or k8s_dashboard_token')

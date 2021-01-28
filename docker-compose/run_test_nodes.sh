@@ -13,13 +13,13 @@ else
     echo "vm_user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 fi
 
-
 FILE=/home/vm_user/.ssh/authorized_keys
+
 if [ -f "$FILE" ]; then
     echo "$FILE exists."
 else
     mkdir -p /home/vm_user/.ssh && touch /home/vm_user/.ssh/authorized_keys
-    cat id_rsa.pub >> /home/vm_user/.ssh/authorized_keys
+    cat /tmp/id_rsa.pub >> /home/vm_user/.ssh/authorized_keys
 fi
 
 cat /home/vm_user/.ssh/authorized_keys

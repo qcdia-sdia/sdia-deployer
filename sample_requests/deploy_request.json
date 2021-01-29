@@ -187,7 +187,7 @@
           "attributes": {
             "desired_state": "RUNNING",
             "current_state": "RUNNING"
-          },
+          }
         }
       }
     },

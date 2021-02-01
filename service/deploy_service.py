@@ -164,11 +164,11 @@ class DeployService:
                     service_port = self.get_service_port(k8s_services, 'kubernetes-dashboard', 'nodePort')
                     dashboard_url = 'https://' + self.master_ip + ':' + str(service_port)
                     attributes['dashboard_url'] = dashboard_url
-                    if 'stdout' in k8s_conf:
-                        dict = yaml.load(k8s_conf.stdout)
+                    if 'stdout' in k8s_conf['config_out']:
+                        dict = yaml.load(k8s_conf['config_out'].stdout)
                         attributes['config'] = dict
                     else:
-                        attributes['config'] = k8s_conf
+                        attributes['config'] = k8s_conf['config_out']
                     logger.info('source.node_template.attributes: ' + str(attributes))
             # raise Exception(
             #     'Did not find k8s_services and/or k8s_dashboard_token')

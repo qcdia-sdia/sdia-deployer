@@ -93,7 +93,7 @@
                 "inputs": {
                   "repository": "https://github.com/QCDIS/playbooks.git",
                   "resources": [
-                    "k8s/set_master_k8s_cluster.yaml",
+                    "k8s/set_master_k8s_cluster-docker.yaml",
                     "k8s/join_k8s_cluster.yaml",
                     "k8s/create_k8s_metrics_server.yaml",
                     "k8s/create_k8s_dashboard.yaml",

@@ -165,7 +165,7 @@ class DeployService:
                     dashboard_url = 'https://' + self.master_ip + ':' + str(service_port)
                     attributes['dashboard_url'] = dashboard_url
                     if 'stdout' in k8s_conf['config_out']:
-                        dict = yaml.load(k8s_conf['config_out'].stdout)
+                        dict = yaml.load(k8s_conf['config_out']['stdout'])
                         attributes['config'] = dict
                     else:
                         attributes['config'] = k8s_conf['config_out']

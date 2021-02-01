@@ -69,7 +69,7 @@ class TestDeployer(unittest.TestCase):
         if tosca_service_is_up and semaphore_is_up:
 
 
-            f = open('../sample_requests/deploy_request.json', )
+            f = open('../sample_requests/deploy_request_mog.json', )
             parsed_json_message = json.load(f)
             tosca_template_path = self.get_tosca_template_path(parsed_json_message)
             tosca_template_dict = parsed_json_message['toscaTemplate']

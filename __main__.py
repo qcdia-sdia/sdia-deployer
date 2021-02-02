@@ -162,7 +162,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     global channel, queue_name, connection, rabbitmq_host, sure_tosca_base_url,semaphore_base_url, semaphore_username, \
-        semaphore_password
+        semaphore_password, awx_base_url, awx_username, awx_password
 
     config = configparser.ConfigParser()
     config.read('properties.ini')

@@ -258,16 +258,18 @@ class AnsibleService:
             environment_id = None
             if env_vars:
                 environment_id = self.semaphore_helper.create_environment(project_id, name, env_vars)
-            task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name,
-                                    environment_id=environment_id)
-            if task_id not in task_ids:
-                task_ids.append(task_id)
-
-            if self.semaphore_helper.get_task(project_id, task_id).status != 'success':
-                msg = ''
-                for out in self.semaphore_helper.get_task_outputs(project_id, task_id):
-                    msg = msg + out.output
-                raise Exception(
-                    'Task: ' + playbook_name + ' failed. ' + self.semaphore_helper.get_task(project_id,
-                                                                                            task_id).status + ' Output: ' + msg)
+            count = 0
+            while self.semaphore_helper.get_task(project_id, task_id).status != 'success':
+                task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name,
+                                        environment_id=environment_id)
+                if task_id not in task_ids:
+                    task_ids.append(task_id)
+                count += 1
+                if count >= 3:
+                    msg = ' '
+                    for out in self.semaphore_helper.get_task_outputs(project_id, task_id):
+                        msg = msg + ' ' + out.output
+                    raise Exception(
+                        'Task: ' + playbook_name + ' failed. ' + self.semaphore_helper.get_task(project_id,
+                                                                                                task_id).status + ' Output: ' + msg)
         return task_ids

@@ -6,6 +6,7 @@ import os
 import os.path
 import tempfile
 import time
+
 import urllib
 import traceback
 
@@ -25,8 +26,20 @@ awx_base_url = 'http://localhost:8052/api/v2'
 awx_username = 'admin'
 awx_password = 'password'
 logger = logging.getLogger(__name__)
+from cryptography.fernet import Fernet
 
 class TestDeployer(unittest.TestCase):
+
+    def test_decode(self):
+        config = configparser.ConfigParser()
+        config.read('../properties.ini')
+        secret = config['credential']['secret']
+        key = bytes(secret, 'utf-8')
+        fernet = Fernet(key)
+        contents = 'SOM3.DATA_that_Need_ENCRIPTION8.'
+        enc_message = fernet.encrypt(contents.encode())
+        dec_message = fernet.decrypt(enc_message).decode()
+        self.assertEqual(contents, dec_message)
 
     def test_inventory(self):
         tosca_service_is_up = ToscaHelper.service_is_up(sure_tosca_base_url)

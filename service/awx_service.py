@@ -333,12 +333,22 @@ class AWXService:
                                                                          job_template_id=topology_template_workflow_steps[call_operation]['job_template'],
                                                                          step_name=step_name)
                     if parent_node_ids:
-                        label = None
-                        if 'on_success' in activity:
+
+                        on_success_children  = activity['on_success']
+                        on_failure_children =  activity['on_failure']
+                        if on_success_children:
                             label = 'on_success'
-                        if 'on_failure' in activity:
+                            children=activity[label]
+                            if isinstance(children, list):
+                                for child in children:
+                                    workflow_node_ids = self.create_workflow_nodes(parent_id=parent_node_ids[0],
+                                                                                   child=child,
+                                                                                   label=label,
+                                                                                   steps=steps,
+                                                                                   topology_template_workflow_steps=topology_template_workflow_steps)
+
+                        if on_failure_children:
                             label = 'on_failure'
-                        if label in activity:
                             children=activity[label]
                             if isinstance(children, list):
                                 for child in children:

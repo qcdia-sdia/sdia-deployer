@@ -441,10 +441,27 @@ class AWXService:
         wf_job_ids = self.post(body, path)
         return wf_job_ids
 
-    def get_workflow_nodes(self, launched_id):
-        path = 'workflow_jobs/'+str(launched_id)+'/workflow_nodes'
-        workflow_nodes = self.get_resources(path)
-        return workflow_nodes
+    # def get_workflow_nodes(self, launched_id):
+    #     path = 'workflow_jobs/'+str(launched_id)+'/workflow_nodes'
+    #     workflow_nodes = self.get_resources(path)
+    #     return workflow_nodes
+
+    def get_job_artfacts(self, attributes_job_id):
+        job_output = self.get_resources('jobs/'+str(attributes_job_id)+'/')
+        return job_output['artifacts']
+
+    def get_attribute_job_id(self, wf_job_id):
+        workflow_nodes = self.get_resources('workflow_jobs/'+str(wf_job_id)+'/workflow_nodes/')
+        return workflow_nodes['results']['job']
+
+    def get_job_status(self, launched_id):
+        workflow = self.get_resources('workflow_jobs/' + str(launched_id) + '/')
+        return workflow['status']
+
+    def set_tosca_node_attributes(self, tosca_template_dict, attributes):
+        for node in tosca_template_dict['topology_template']['node_templates']:
+            print(node)
+        pass
 
 
 

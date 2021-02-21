@@ -140,9 +140,9 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                 for launched_id in launched_ids:
                     while awx.get_job_status(launched_id) == 'running':
                         logger.info('Workflow: ' + str(launched_id) + ' status: '+ awx.get_job_status(launched_id))
-                        sleep(6)
+                        sleep(5)
                     job_id = awx.get_attribute_job_id(launched_id)
-                    attributes.update(awx.get_job_artfacts(job_id))
+                    attributes.update(awx.get_job_artefacts(job_id))
                 tosca_template_dict = awx.set_tosca_node_attributes(tosca_template_dict,attributes)
 
         response = {'toscaTemplate': tosca_template_dict}

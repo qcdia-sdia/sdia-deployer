@@ -332,10 +332,15 @@ class AWXService:
                         parent_node_ids = self.create_root_workflow_node(workflow_id=workflow_id,
                                                                          job_template_id=topology_template_workflow_steps[call_operation]['job_template'],
                                                                          step_name=step_name)
+                    on_success_children = None
+                    on_failure_children = None
                     if parent_node_ids:
+                        if 'on_success' in activity:
+                            on_success_children = activity['on_success']
+                        if 'on_failure' in activity:
+                            on_failure_children = activity['on_failure']
 
-                        on_success_children  = activity['on_success']
-                        on_failure_children =  activity['on_failure']
+
                         if on_success_children:
                             label = 'on_success'
                             children=activity[label]
@@ -477,13 +482,16 @@ class AWXService:
     #     workflow_nodes = self.get_resources(path)
     #     return workflow_nodes
 
-    def get_job_artfacts(self, attributes_job_id):
+    def get_job_artefacts(self, attributes_job_id):
         job_output = self.get_resources('jobs/'+str(attributes_job_id)+'/')
         return job_output['artifacts']
 
     def get_attribute_job_id(self, wf_job_id):
         workflow_nodes = self.get_resources('workflow_jobs/'+str(wf_job_id)+'/workflow_nodes/')
-        return workflow_nodes['results']['job']
+        for wf_node in workflow_nodes:
+            if not wf_node['success_nodes'] and not wf_node['failure_nodes']and not wf_node['always_nodes']:
+                return wf_node['id']
+        return None
 
     def get_job_status(self, launched_id):
         workflow = self.get_resources('workflow_jobs/' + str(launched_id) + '/')
@@ -491,8 +499,9 @@ class AWXService:
 
     def set_tosca_node_attributes(self, tosca_template_dict, attributes):
         for node in tosca_template_dict['topology_template']['node_templates']:
-            print(node)
-        pass
+            if 'attributes' in node:
+                node['attributes'].update(attributes)
+        return tosca_template_dict
 
 
 

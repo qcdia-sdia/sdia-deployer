@@ -142,7 +142,12 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                         logger.info('Workflow: ' + str(launched_id) + ' status: '+ awx.get_job_status(launched_id))
                         sleep(5)
                     job_id = awx.get_attribute_job_id(launched_id)
+                    if not job_id:
+                        raise Exception('Could not find attribute job id from workflow: '+launched_id)
+
                     attributes.update(awx.get_job_artefacts(job_id))
+                    logger.info('Updated attributes:' + str(attributes))
+
                 tosca_template_dict = awx.set_tosca_node_attributes(tosca_template_dict,attributes)
 
         response = {'toscaTemplate': tosca_template_dict}

@@ -489,8 +489,9 @@ class AWXService:
     def get_attribute_job_id(self, wf_job_id):
         workflow_nodes = self.get_resources('workflow_jobs/'+str(wf_job_id)+'/workflow_nodes/')
         for wf_node in workflow_nodes:
-            if not wf_node['success_nodes'] and not wf_node['failure_nodes']and not wf_node['always_nodes']:
-                return wf_node['id']
+            if not wf_node['success_nodes'] and not wf_node['failure_nodes'] and not wf_node['always_nodes'] and 'job' \
+                    in wf_node and 'attributes' in wf_node['identifier']:
+                return wf_node['job']
         return None
 
     def get_job_status(self, launched_id):
@@ -498,9 +499,14 @@ class AWXService:
         return workflow['status']
 
     def set_tosca_node_attributes(self, tosca_template_dict, attributes):
-        for node in tosca_template_dict['topology_template']['node_templates']:
-            if 'attributes' in node:
-                node['attributes'].update(attributes)
+        node_templates = tosca_template_dict['topology_template']['node_templates']
+        for node_name in attributes:
+            if 'attributes' in node_templates[node_name]:
+                node_attributes = node_templates[node_name]['attributes']
+            else:
+                node_attributes ={}
+            node_attributes.update(attributes[node_name])
+            node_templates[node_name]['attributes'] = node_attributes
         return tosca_template_dict
 
 

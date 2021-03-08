@@ -1,7 +1,9 @@
 # To change this license header, choose License Headers in Project Properties.
 # To change this template file, choose Tools | Templates
 # and open the template in the editor.
+import base64
 import configparser
+import hashlib
 import json
 import logging
 import os
@@ -14,6 +16,8 @@ from time import sleep
 
 import pika
 import yaml
+
+from cryptography.fernet import Fernet
 
 from service.awx_service import AWXService
 from service.deploy_service import DeployService
@@ -72,8 +76,8 @@ def save_tosca_template(tosca_template_dict):
 
 def semaphore(tosca_template_path=None, tosca_template_dict=None):
     tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
-    nodes = tosca_helper.get_application_nodes()
-    # nodes = tosca_helper.get_deployment_node_pipeline()
+    # nodes = tosca_helper.get_application_nodes()
+    nodes = tosca_helper.get_deployment_node_pipeline()
 
     deployService = DeployService(semaphore_base_url=semaphore_base_url, semaphore_username=semaphore_username,
                                   semaphore_password=semaphore_password, vms=tosca_helper.get_vms())
@@ -117,6 +121,7 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
         workflows = tosca_helper.get_workflows()
         if workflows:
             launched_ids = []
+            attributes = {}
             for workflow_name in workflows:
                 workflow = workflows[workflow_name]
                 description = None
@@ -130,7 +135,52 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                 logger.info('Added nodes to workflow')
                 for wf_id in wf_ids:
                     wf_job_ids = awx.launch(wf_id)
+                    logger.info('Launch workflows: '+str(wf_job_ids))
                     launched_ids += wf_job_ids
+                for launched_id in launched_ids:
+                    while awx.get_job_status(launched_id) == 'running':
+                        logger.info('Workflow: ' + str(launched_id) + ' status: '+ awx.get_job_status(launched_id))
+                        sleep(5)
+                    job_id = awx.get_attribute_job_id(launched_id)
+                    if not job_id:
+                        raise Exception('Could not find attribute job id from workflow: '+launched_id)
+
+                    attributes.update(awx.get_job_artefacts(job_id))
+                    logger.info('Updated attributes:' + str(attributes))
+
+                tosca_template_dict = awx.set_tosca_node_attributes(tosca_template_dict,attributes)
+
+        response = {'toscaTemplate': tosca_template_dict}
+        output_current_milli_time = int(round(time.time() * 1000))
+        response["creationDate"] = output_current_milli_time
+        logger.info("Returning Deployment")
+        logger.info("Output message:" + json.dumps(response))
+        return json.dumps(response)
+
+def decode_credentials(tosca_template_dict):
+    node_templates = tosca_template_dict['topology_template']['node_templates']
+    enc_key = bytes(secret, 'utf-8')
+    for node_template_name in node_templates:
+        node_template = node_templates[node_template_name]
+        if 'attributes' in node_template and 'credentials' in node_template['attributes']:
+            credentials = node_template['attributes']['credentials']
+            for credential in credentials:
+                if 'token' in credential:
+                    token = credential['token']
+                    credential['token'] = decode(token,enc_key)
+                if 'keys' in credential:
+                    keys = credential['keys']
+                    for key_name in keys:
+                        token = keys[key_name]
+                        keys[key_name] = decode(token, enc_key)
+    return tosca_template_dict
+
+
+def decode(contents,key):
+    fernet = Fernet(key)
+    dec = fernet.decrypt(contents.encode()).decode()
+    return dec
+
 
 
 
@@ -144,6 +194,7 @@ def handle_delivery(message):
     owner = parsed_json_message['owner']
     tosca_file_name = 'tosca_template'
     tosca_template_dict = parsed_json_message['toscaTemplate']
+    tosca_template_dict = decode_credentials(tosca_template_dict)
 
     tosca_template_path = save_tosca_template(tosca_template_dict)
     if 'workflows' in tosca_template_dict['topology_template']:
@@ -162,7 +213,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     global channel, queue_name, connection, rabbitmq_host, sure_tosca_base_url,semaphore_base_url, semaphore_username, \
-        semaphore_password, awx_base_url, awx_username, awx_password
+        semaphore_password, awx_base_url, awx_username, awx_password, secret
 
     config = configparser.ConfigParser()
     config.read('properties.ini')
@@ -178,6 +229,8 @@ if __name__ == "__main__":
 
     rabbitmq_host = config['message_broker']['host']
     queue_name = config['message_broker']['queue_name']
+
+    secret = config['credential']['secret']
 
     logger.info('Properties sure_tosca_base_url: ' + sure_tosca_base_url + ', semaphore_base_url: ' + semaphore_base_url
                 + ', rabbitmq_host: ' + rabbitmq_host+ ', queue_name: '+queue_name)

@@ -17,4 +17,5 @@ semaphore-client==1.0.0
 ansible-tower-cli==3.3.9
 awxkit==15.0.1
 ansible==2.10.5
+cryptography==3.4.4
 

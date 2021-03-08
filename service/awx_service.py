@@ -180,7 +180,11 @@ class AWXService:
     def get_resources(self, api_path):
         r = self._session.get(self.api_url + '/' + api_path, headers=self.headers)
         if r.status_code == 200:
-            return r.json()['results']
+            res_json = r.json()
+            if 'results' in res_json:
+                return res_json['results']
+            else:
+                return res_json
         if r.status_code == 404:
             return None
         else:
@@ -262,6 +266,7 @@ class AWXService:
                     workflow_step = {}
                     step = interfaces[interface_name][step_name]
                     wf_name = interface_name + '.' + step_name
+                    logger.info('Creating steps: ' + wf_name)
                     if 'inputs' in step and 'repository' in step['inputs']:
                         repository_url = step['inputs']['repository']
 
@@ -308,6 +313,7 @@ class AWXService:
         steps = tosca_workflow['steps']
         for step_name in steps:
             graph.add_node(step_name)
+            logger.info('Creating step: '+step_name)
             step = steps[step_name]
             activities = step['activities']
             for activity in activities:
@@ -326,13 +332,28 @@ class AWXService:
                         parent_node_ids = self.create_root_workflow_node(workflow_id=workflow_id,
                                                                          job_template_id=topology_template_workflow_steps[call_operation]['job_template'],
                                                                          step_name=step_name)
+                    on_success_children = None
+                    on_failure_children = None
                     if parent_node_ids:
-                        label = None
                         if 'on_success' in activity:
-                            label = 'on_success'
+                            on_success_children = activity['on_success']
                         if 'on_failure' in activity:
+                            on_failure_children = activity['on_failure']
+
+
+                        if on_success_children:
+                            label = 'on_success'
+                            children=activity[label]
+                            if isinstance(children, list):
+                                for child in children:
+                                    workflow_node_ids = self.create_workflow_nodes(parent_id=parent_node_ids[0],
+                                                                                   child=child,
+                                                                                   label=label,
+                                                                                   steps=steps,
+                                                                                   topology_template_workflow_steps=topology_template_workflow_steps)
+
+                        if on_failure_children:
                             label = 'on_failure'
-                        if label in activity:
                             children=activity[label]
                             if isinstance(children, list):
                                 for child in children:
@@ -383,25 +404,40 @@ class AWXService:
                 child_id = self.add_child_node(identifier=child,
                                                unified_job_template=topology_template_workflow_steps[call_operation]['job_template'],
                                                path=path)
-                label = None
+                on_success_children = None
+                on_failure_children = None
                 if 'on_success' in activity:
-                    label = 'on_success'
+                    on_success_children = activity['on_success']
                 if 'on_failure' in activity:
-                    label = 'on_failure'
-                if label in activity:
-                    children = activity[label]
-                    if isinstance(children, list) and child_id:
-                        for child in children:
+                    on_failure_children = activity['on_failure']
+                if on_success_children:
+                    if isinstance(on_success_children, list) and child_id:
+                        for child in on_success_children:
                             self.create_workflow_nodes(parent_id=child_id,
                                                        child=child,
-                                                       label=label,
+                                                       label='on_success',
                                                        steps=steps,
                                                        topology_template_workflow_steps=topology_template_workflow_steps)
-                    if isinstance(children, str) and child_id:
-                        child = children
+                    if isinstance(on_success_children, str) and child_id:
+                        child = on_success_children
                         self.create_workflow_nodes(parent_id=child_id,
                                                    child=child,
-                                                   label=label,
+                                                   label='on_success',
+                                                   steps=steps,
+                                                   topology_template_workflow_steps=topology_template_workflow_steps)
+                if on_failure_children:
+                    if isinstance(on_failure_children, list) and child_id:
+                        for child in on_failure_children:
+                            self.create_workflow_nodes(parent_id=child_id,
+                                                       child=child,
+                                                       label='on_failure',
+                                                       steps=steps,
+                                                       topology_template_workflow_steps=topology_template_workflow_steps)
+                    if isinstance(on_failure_children, str) and child_id:
+                        child = on_success_children
+                        self.create_workflow_nodes(parent_id=child_id,
+                                                   child=child,
+                                                   label='on_failure',
                                                    steps=steps,
                                                    topology_template_workflow_steps=topology_template_workflow_steps)
         return None
@@ -441,10 +477,37 @@ class AWXService:
         wf_job_ids = self.post(body, path)
         return wf_job_ids
 
-    def get_workflow_nodes(self, launched_id):
-        path = 'workflow_jobs/'+str(launched_id)+'/workflow_nodes'
-        workflow_nodes = self.get_resources(path)
-        return workflow_nodes
+    # def get_workflow_nodes(self, launched_id):
+    #     path = 'workflow_jobs/'+str(launched_id)+'/workflow_nodes'
+    #     workflow_nodes = self.get_resources(path)
+    #     return workflow_nodes
+
+    def get_job_artefacts(self, attributes_job_id):
+        job_output = self.get_resources('jobs/'+str(attributes_job_id)+'/')
+        return job_output['artifacts']
+
+    def get_attribute_job_id(self, wf_job_id):
+        workflow_nodes = self.get_resources('workflow_jobs/'+str(wf_job_id)+'/workflow_nodes/')
+        for wf_node in workflow_nodes:
+            if not wf_node['success_nodes'] and not wf_node['failure_nodes'] and not wf_node['always_nodes'] and 'job' \
+                    in wf_node and 'attributes' in wf_node['identifier']:
+                return wf_node['job']
+        return None
+
+    def get_job_status(self, launched_id):
+        workflow = self.get_resources('workflow_jobs/' + str(launched_id) + '/')
+        return workflow['status']
+
+    def set_tosca_node_attributes(self, tosca_template_dict, attributes):
+        node_templates = tosca_template_dict['topology_template']['node_templates']
+        for node_name in attributes:
+            if 'attributes' in node_templates[node_name]:
+                node_attributes = node_templates[node_name]['attributes']
+            else:
+                node_attributes ={}
+            node_attributes.update(attributes[node_name])
+            node_templates[node_name]['attributes'] = node_attributes
+        return tosca_template_dict
 
 
 

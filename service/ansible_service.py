@@ -259,6 +259,9 @@ class AnsibleService:
             if env_vars:
                 environment_id = self.semaphore_helper.create_environment(project_id, name, env_vars)
             count = 0
+            task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name,
+                                    environment_id=environment_id)
+
             while self.semaphore_helper.get_task(project_id, task_id).status != 'success':
                 task_id = self.run_task(name, project_id, key_id, git_url, inventory_id, playbook_name,
                                         environment_id=environment_id)

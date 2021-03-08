@@ -45,14 +45,14 @@ class TestDeployer(unittest.TestCase):
         tosca_service_is_up = ToscaHelper.service_is_up(sure_tosca_base_url)
         semaphore_is_up = ToscaHelper.service_is_up(semaphore_base_url)
         if tosca_service_is_up and semaphore_is_up:
-            parsed_json_message = self.get_request_message('https://raw.githubusercontent.com/qcdis-sdia/sdia-deployer/master/sample_requests/deploy_request.json')
+            parsed_json_message = self.get_request_message('https://raw.githubusercontent.com/qcdis-sdia/sdia-deployer/master/sample_requests/deploy_request_mog.json')
             tosca_template_path = self.get_tosca_template_path(parsed_json_message)
             tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
             nodes_pairs = tosca_helper.get_deployment_node_pipeline()
             vms=tosca_helper.get_vms()
 
     def test_deploy_service(self):
-        parsed_json_message = self.get_request_message('https://raw.githubusercontent.com/qcdis-sdia/sdia-deployer/master/sample_requests/deploy_request.json')
+        parsed_json_message = self.get_request_message('https://raw.githubusercontent.com/qcdis-sdia/sdia-deployer/master/sample_requests/deploy_request_mog.json')
         tosca_template_path = self.get_tosca_template_path(parsed_json_message)
         # owner = parsed_json_message['owner']
 

@@ -32,7 +32,18 @@ class TestDeployer(unittest.TestCase):
 
     def test_decode(self):
         config = configparser.ConfigParser()
-        config.read('../properties.ini')
+        path = os.getcwd()
+        print("Current Directory", path)
+
+        conf_path = '../properties.ini'
+        try:
+            f = open(conf_path)
+        except IOError:
+            conf_path = 'properties.ini'
+            f = open(conf_path)
+        finally:
+            f.close()
+        config.read(conf_path)
         secret = config['credential']['secret']
         key = bytes(secret, 'utf-8')
         fernet = Fernet(key)

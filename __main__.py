@@ -236,7 +236,7 @@ if __name__ == "__main__":
                 + ', rabbitmq_host: ' + rabbitmq_host+ ', queue_name: '+queue_name)
 
     channel, connection = init_channel(rabbitmq_host, queue_name)
-
+    logger.info("v1.0.3")
     logger.info("Awaiting RPC requests")
     try:
         thread = Thread(target=threaded_function, args=(1,))

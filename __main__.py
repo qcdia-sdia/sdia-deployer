@@ -182,9 +182,17 @@ def decode_credentials(tosca_template_dict):
 
 
 def decode(contents,key):
-    fernet = Fernet(key)
-    dec = fernet.decrypt(contents.encode()).decode()
-    return dec
+    try:
+        fernet = Fernet(key)
+        dec = fernet.decrypt(contents.encode()).decode()
+        return dec
+    except Exception as ex:
+        done = True
+        e = sys.exc_info()[0]
+        logger.info("Error: " + str(e))
+        print(e)
+        exit(-1)
+
 
 
 

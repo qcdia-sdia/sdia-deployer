@@ -67,14 +67,17 @@ def on_request(ch, method, props, body):
 
 
 def save_tosca_template(tosca_template_dict):
+
     tmp_path = tempfile.mkdtemp()
     tosca_template_path = tmp_path + os.path.sep + 'toscaTemplate.yml'
+    logger.info('Saving tosca_template at: '+tosca_template_path)
     with open(tosca_template_path, 'w') as outfile:
         yaml.dump(tosca_template_dict, outfile, default_flow_style=False)
     return  tosca_template_path
 
 
 def semaphore(tosca_template_path=None, tosca_template_dict=None):
+    logger.info('Deploying using semaphore.')
     tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
     # nodes = tosca_helper.get_application_nodes()
     nodes = tosca_helper.get_deployment_node_pipeline()
@@ -106,6 +109,7 @@ def semaphore(tosca_template_path=None, tosca_template_dict=None):
 
 def awx(tosca_template_path=None, tosca_template_dict=None):
     tosca_service_is_up = ToscaHelper.service_is_up(sure_tosca_base_url)
+    logger.info('Deploying using awx.')
     if tosca_service_is_up:
         tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
         node_templates = tosca_template_dict['topology_template']['node_templates']

@@ -158,6 +158,7 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
         return json.dumps(response)
 
 def decode_credentials(tosca_template_dict):
+    logger.info('Decoding credentials.')
     node_templates = tosca_template_dict['topology_template']['node_templates']
     enc_key = bytes(secret, 'utf-8')
     for node_template_name in node_templates:

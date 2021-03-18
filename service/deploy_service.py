@@ -31,6 +31,7 @@ class DeployService:
                 break
 
     def deploy(self, tosca_node):
+        logger.info('Deploying: '+str(tosca_node))
         interface_types = tosca_helper.get_interface_types(tosca_node)
         if interface_types:
             ansible_service = AnsibleService(self.semaphore_base_url, self.semaphore_username, self.semaphore_password)

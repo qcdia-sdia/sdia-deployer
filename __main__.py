@@ -194,6 +194,7 @@ def handle_delivery(message):
     owner = parsed_json_message['owner']
     tosca_file_name = 'tosca_template'
     tosca_template_dict = parsed_json_message['toscaTemplate']
+    logger.info('Decoding credentials.')
     tosca_template_dict = decode_credentials(tosca_template_dict)
 
     tosca_template_path = save_tosca_template(tosca_template_dict)

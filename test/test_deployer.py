@@ -46,6 +46,7 @@ class TestDeployer(unittest.TestCase):
         config.read(conf_path)
         secret = config['credential']['secret']
         key = bytes(secret, 'utf-8')
+
         fernet = Fernet(key)
         contents = 'SOM3.DATA_that_Need_ENCRIPTION8.'
         enc_message = fernet.encrypt(contents.encode())

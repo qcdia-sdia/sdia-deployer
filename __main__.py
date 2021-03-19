@@ -246,7 +246,7 @@ if __name__ == "__main__":
     secret = config['credential']['secret']
 
     logger.info('Properties sure_tosca_base_url: ' + sure_tosca_base_url + ', semaphore_base_url: ' + semaphore_base_url
-                + ', rabbitmq_host: ' + rabbitmq_host+ ', queue_name: '+queue_name)
+                + ', rabbitmq_host: ' + rabbitmq_host+ ', queue_name: '+queue_name+' secret: '+secret)
 
     channel, connection = init_channel(rabbitmq_host, queue_name)
     logger.info("v1.0.3")

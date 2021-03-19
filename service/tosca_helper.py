@@ -1,5 +1,6 @@
 import copy
 import hashlib
+import logging
 import os
 import sys
 import urllib.request
@@ -9,7 +10,7 @@ from sure_tosca_client import Configuration, ApiClient, NodeTemplate
 from sure_tosca_client.api import default_api
 import networkx as nx
 from toscaparser.tosca_template import ToscaTemplate
-
+logger = logging.getLogger(__name__)
 
 class ToscaHelper:
 
@@ -20,7 +21,9 @@ class ToscaHelper:
 
         self.tosca_template_dict = self.get_tosca_from_file(tosca_template_path)
         self.tosca_client = self.init_sure_tosca_client(sure_tosca_base_url)
+        logger.info('Uploading: '+tosca_template_path)
         self.doc_id = self.upload_tosca_template(tosca_template_path)
+        logger.info('Got from sure_tosca id: ' + str(self.doc_id))
 
 
     def upload_tosca_template(self, file_path):

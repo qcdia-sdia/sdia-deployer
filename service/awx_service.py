@@ -17,8 +17,9 @@ logger = logging.getLogger(__name__)
 
 class AWXService:
 
-    def __init__(self, api_url=None, username=None, password=None):
+    def __init__(self, api_url=None, username=None, password=None,credentials=None):
         self.login(username=username, password=password, api_url=api_url)
+        self.add_credentials(credentials)
 
     def login(self, username=None, password=None, api_url=None, token=None):
         self._session = requests.Session()
@@ -38,7 +39,7 @@ class AWXService:
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             }
-        r = self._session.get(self.api_url + '/me/', headers=self.headers)
+        r = self._session.get(self.api_url + '/me/', headers=self.headers,verify=False)
 
         if r.status_code == 403 or r.status_code == 401:
             raise tower_cli.exceptions.AuthError
@@ -114,7 +115,7 @@ class AWXService:
 
     def post(self, body, api_path):
 
-        r = self._session.post(self.api_url + '/' + api_path + '/', data=json.dumps(body), headers=self.headers)
+        r = self._session.post(self.api_url + '/' + api_path + '/', data=json.dumps(body), headers=self.headers,verify=False)
         ids = []
         if r.status_code == 201 or r.status_code == 202 or r.status_code == 204:
             if r.text:
@@ -125,9 +126,9 @@ class AWXService:
             return ids
         elif r.status_code == 400 and 'already exists' in r.text:
             if 'name' in body:
-                r = self._session.get(self.api_url + '/' + api_path + '/?name=' + body['name'], headers=self.headers)
+                r = self._session.get(self.api_url + '/' + api_path + '/?name=' + body['name'], headers=self.headers,verify=False)
             elif 'identifier' in body:
-                r = self._session.get(self.api_url + '/' + api_path + '/?identifier=' + body['identifier'], headers=self.headers)
+                r = self._session.get(self.api_url + '/' + api_path + '/?identifier=' + body['identifier'], headers=self.headers,verify=False)
             results = r.json()['results']
 
             for res in results:
@@ -178,7 +179,7 @@ class AWXService:
         return inventory_hosts_ids
 
     def get_resources(self, api_path):
-        r = self._session.get(self.api_url + '/' + api_path, headers=self.headers)
+        r = self._session.get(self.api_url + '/' + api_path, headers=self.headers,verify=False)
         if r.status_code == 200:
             res_json = r.json()
             if 'results' in res_json:
@@ -508,6 +509,29 @@ class AWXService:
             node_attributes.update(attributes[node_name])
             node_templates[node_name]['attributes'] = node_attributes
         return tosca_template_dict
+
+    def add_credentials(self, credentials):
+        credential_ids = []
+        if credentials:
+            path = 'credentials'
+            for credential in credentials:
+                body = {}
+                if 'cloud_provider_name' in credential:
+                    if credential['cloud_provider_name'] == 'Azure':
+                        body = {
+                            "name": credential['cloud_provider_name'],
+                            "organization": 1,
+                            "credential_type": 11,
+                            "inputs": {
+                                "client": credential['user'],
+                                "secret": credential['token'],
+                                "tenant": credential['extra_properties']['tenant'],
+                                "subscription": credential['extra_properties']['subscription_id']
+                            }
+                    }
+                credential_id = self.post(body, path)
+                credential_ids.append(credential_id)
+        return credential_ids
 
 
 

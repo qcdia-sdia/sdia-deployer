@@ -1,32 +1,16 @@
-import copy
-import json
-import logging
-import os
-import copy
 import json
 import logging
 import os
 import os.path
+import os.path
+import re  # noqa: F401
 import tempfile
-import time
 import unittest
-from urllib.parse import urlparse
-
-import requests
-import yaml
-import os.path
-import tempfile
-import time
 import urllib
 
 import yaml
-import re  # noqa: F401
-from pathlib import Path
-import unittest
 
 from service.awx_service import AWXService
-import logging
-
 from service.tosca_helper import ToscaHelper
 
 sure_tosca_base_url = 'http://localhost:8081/tosca-sure/1.0.0'

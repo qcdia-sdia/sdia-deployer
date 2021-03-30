@@ -155,14 +155,16 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
             if 'attributes' in node_template and 'credentials' in node_template['attributes']:
                 credentials = node_template['attributes']['credentials']
 
-        awx = AWXService(api_url=awx_base_url, username=awx_username, password=awx_password,credentials=credentials)
+        awx = AWXService(api_url=awx_base_url, username=awx_username, password=awx_password,tosca_helper=tosca_helper)
+        organization_id = awx.create_organization('sdia')
+        awx.add_credentials(credentials,organization_id=organization_id)
         topology_template_workflow_steps = {}
         for tosca_node_name in node_templates:
             tosca_node = node_templates[tosca_node_name]
             logger.info('Resolving function values for: '+tosca_node_name)
             tosca_node = tosca_helper.resolve_function_values(tosca_node)
             logger.info('Creating workflow steps for: ' + tosca_node_name)
-            node_workflow_steps = awx.create_workflow_steps(tosca_node)
+            node_workflow_steps = awx.create_workflow_steps(tosca_node,organization_id=organization_id)
             topology_template_workflow_steps.update(node_workflow_steps)
 
         workflows = tosca_helper.get_workflows()

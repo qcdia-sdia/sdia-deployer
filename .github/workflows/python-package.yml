@@ -5,7 +5,7 @@ name: Python package
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, develop ]
   pull_request:
     branches: [ master ]
 
@@ -20,7 +20,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Start containers
-      run: docker-compose -f "docker-compose.yml" up -d --build
+      run: docker-compose -f "docker-compose/docker-compose.yml" up -d --build
+    - name: Sleep for 300 seconds
+      uses: jakejarvis/wait-action@master
+      with:
+        time: '300s'
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
@@ -34,9 +38,9 @@ jobs:
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude docker-compose
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude docker-compose
     - name: Test with pytest
       run: |
         pytest

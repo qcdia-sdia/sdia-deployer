@@ -1,25 +1,26 @@
 import json
+import logging
 import os
 import tempfile
 import time
 import uuid
 from base64 import b64encode
-import networkx as nx
-import logging
-import matplotlib.pyplot as plt
-import requests
-import yaml
+
 import ansible.inventory.manager
+import networkx as nx
+import requests
+import tower_cli.exceptions
+import yaml
 from ansible.inventory.manager import InventoryManager
 from ansible.parsing.dataloader import DataLoader
-import tower_cli.exceptions
+
 logger = logging.getLogger(__name__)
 
 class AWXService:
 
-    def __init__(self, api_url=None, username=None, password=None,credentials=None):
+    def __init__(self, api_url=None, username=None, password=None,tosca_helper=None):
         self.login(username=username, password=password, api_url=api_url)
-        self.add_credentials(credentials)
+        self.tosca_helper = tosca_helper
 
     def login(self, username=None, password=None, api_url=None, token=None):
         self._session = requests.Session()
@@ -44,7 +45,8 @@ class AWXService:
         if r.status_code == 403 or r.status_code == 401:
             raise tower_cli.exceptions.AuthError
 
-    def create_project(self, project_name=None, scm_url=None, scm_branch=None, credential=None, scm_type=None):
+    def create_project(self, project_name=None, scm_url=None, scm_branch=None, credential=None, scm_type=None,organization_id=None):
+
         body = {
             'name': project_name,
             'description': '',
@@ -56,7 +58,7 @@ class AWXService:
             'scm_delete_on_update': False,
             'credential': credential,
             'timeout': 0,
-            'organization': 1,
+            'organization': organization_id,
             'scm_update_on_launch': True,
             'scm_update_cache_timeout': 0,
             'allow_override': False
@@ -64,7 +66,7 @@ class AWXService:
 
         return self.post(body, 'projects')
 
-    def create_inventory(self, inventory_name=None, inventory=None):
+    def create_inventory(self, inventory_name=None, inventory=None,organization_id=None):
         loader = DataLoader()
         fd, inventory_path = tempfile.mkstemp()
         with os.fdopen(fd, 'w') as outfile:
@@ -74,7 +76,7 @@ class AWXService:
         body = {
             'name': inventory_name,
             'description': '',
-            'organization': 1,
+            'organization': organization_id,
             'kind': '',
             'host_filter': None,
             'variables': '',
@@ -92,12 +94,12 @@ class AWXService:
                     inventory_hosts_id = self.create_inventory_hosts(host, inventory_group_id=inventory_group_ids[0])
         return inventory_id
 
-    def create_workflow(self, description=None, workflow_name=None, topology_template_workflow_steps=None) -> list:
+    def create_workflow(self, description=None, workflow_name=None, topology_template_workflow_steps=None,organization_id=None) -> list:
         description = ''
         body = {
             'name': workflow_name,
             'description': description,
-            'organization': 1,
+            'organization': organization_id,
             'survey_enabled': False,
             'allow_simultaneous': True,
             'ask_variables_on_launch': False,
@@ -258,11 +260,12 @@ class AWXService:
                     raise ex
         return job_templates_ids
 
-    def create_workflow_steps(self, tosca_node):
+    def create_workflow_steps(self, tosca_node,organization_id=None):
         if 'interfaces' in tosca_node:
             workflow_steps = {}
             interfaces = tosca_node['interfaces']
             for interface_name in interfaces:
+                self.tosca_helper.get_interface_ancestors(interface_name)
                 for step_name in interfaces[interface_name]:
                     workflow_step = {}
                     step = interfaces[interface_name][step_name]
@@ -270,16 +273,18 @@ class AWXService:
                     logger.info('Creating steps: ' + wf_name)
                     if 'inputs' in step and 'repository' in step['inputs']:
                         repository_url = step['inputs']['repository']
-
                         project_id = self.create_project(project_name=repository_url, scm_url=repository_url,
-                                                         scm_branch='master', scm_type='git')
+                                                         scm_branch='master', scm_type='git',organization_id=organization_id)
                         workflow_step[wf_name] = {'project': project_id[0]}
 
                         inventory = step['inputs']['inventory']
-                        inventory_id = self.create_inventory(inventory_name=wf_name, inventory=inventory)
+                        inventory_id = self.create_inventory(inventory_name=wf_name, inventory=inventory,organization_id=organization_id)
                         workflow_step[wf_name]['inventory'] = inventory_id
-                    if 'implementation' in interfaces[interface_name][step_name]:
-                        workflow_step[wf_name]['implementation'] = interfaces[interface_name][step_name][
+                    if 'extra_variables' in step['inputs']:
+                        extra_variables = interfaces[interface_name][step_name]
+                        print(extra_variables)
+                    if 'implementation' in step['inputs']:
+                        workflow_step[wf_name]['implementation'] = step['inputs'][
                             'implementation']
                         workflow_step[wf_name]['job_template'] = self.create_job_template(workflow_step)[0]
                     if workflow_step:
@@ -510,7 +515,7 @@ class AWXService:
             node_templates[node_name]['attributes'] = node_attributes
         return tosca_template_dict
 
-    def add_credentials(self, credentials):
+    def add_credentials(self, credentials,organization_id=None):
         credential_ids = []
         if credentials:
             path = 'credentials'
@@ -520,7 +525,7 @@ class AWXService:
                     if credential['cloud_provider_name'] == 'Azure':
                         body = {
                             "name": credential['cloud_provider_name'],
-                            "organization": 1,
+                            "organization": organization_id,
                             "credential_type": 11,
                             "inputs": {
                                 "client": credential['user'],
@@ -529,10 +534,15 @@ class AWXService:
                                 "subscription": credential['extra_properties']['subscription_id']
                             }
                     }
-                credential_id = self.post(body, path)
-                credential_ids.append(credential_id)
+                        credential_id = self.post(body, path)
+                        credential_ids.append(credential_id)
         return credential_ids
 
-
-
-
+    def create_organization(self, name):
+        body = {
+            "name": name,
+            "description": "",
+            "max_hosts": 99
+        }
+        organization_id = self.post(body, 'organizations')
+        return organization_id[0]

@@ -1,15 +1,15 @@
-import copy
-import hashlib
+import logging
 import logging
 import os
 import sys
 import urllib.request
 
-import yaml
-from sure_tosca_client import Configuration, ApiClient, NodeTemplate
-from sure_tosca_client.api import default_api
 import networkx as nx
+import yaml
+from sure_tosca_client import Configuration, ApiClient
+from sure_tosca_client.api import default_api
 from toscaparser.tosca_template import ToscaTemplate
+
 logger = logging.getLogger(__name__)
 
 class ToscaHelper:
@@ -23,8 +23,31 @@ class ToscaHelper:
         self.tosca_client = self.init_sure_tosca_client(sure_tosca_base_url)
         logger.info('Uploading: '+tosca_template_path)
         self.doc_id = self.upload_tosca_template(tosca_template_path)
+        self.tt = self.get_tosca_template(self.tosca_template_dict)
+        self.all_types = {}
+        tosca_node_types = self.tt.nodetemplates[0].type_definition.TOSCA_DEF
+        all_custom_def =  self.tt.nodetemplates[0].custom_def
+        self.all_types.update(tosca_node_types)
+        self.all_types.update(all_custom_def)
         logger.info('Got from sure_tosca id: ' + str(self.doc_id))
 
+    def get_tosca_template(self,tosca_template_dict):
+        if 'workflows' in tosca_template_dict['topology_template']:
+            workflows = tosca_template_dict['topology_template'].pop('workflows')
+            logger.info("Ignoring  workflows: " + str(workflows))
+        tt = ToscaTemplate(yaml_dict_tpl=tosca_template_dict)
+        return tt
+
+    def get_interface_ancestors(self, interface_name,derived=None):
+        for interface_type_name in self.all_types:
+            if 'tosca.interfaces' in interface_type_name and interface_name in interface_type_name:
+                if not derived:
+                    derived = []
+                interface = self.all_types[interface_type_name]
+                if 'derived_from' in interface:
+                    derived.append(interface['derived_from'])
+                    self.get_interface_ancestors(interface['derived_from'],derived)
+        return derived
 
     def upload_tosca_template(self, file_path):
         file_id = self.tosca_client.upload_tosca_template(file_path)

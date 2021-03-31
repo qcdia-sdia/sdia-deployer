@@ -106,7 +106,7 @@ def save_tosca_template(tosca_template_dict):
 #         raise
 
 
-def execute_workflows(workflows=None,topology_template_workflow_steps=None,awx=None):
+def execute_workflows(workflows=None, topology_template_workflow_steps=None, awx=None):
     launched_ids = []
     attributes = {}
     tosca_template_dict = {}
@@ -131,7 +131,7 @@ def execute_workflows(workflows=None,topology_template_workflow_steps=None,awx=N
                 sleep(5)
             job_id = awx.get_attribute_job_id(launched_id)
             if not job_id:
-                raise Exception('Could not find attribute job id from workflow: ' + launched_id)
+                raise Exception('Could not find attribute job id from workflow: ' + str(launched_id))
 
             attributes.update(awx.get_job_artefacts(job_id))
             logger.info('Updated attributes:' + str(attributes))
@@ -180,35 +180,6 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                 tosca_template_dict = execute_workflows(workflows=workflows,
                                                              topology_template_workflow_steps=topology_template_workflow_steps,
                                                              awx=awx)
-                # launched_ids = []
-                # attributes = {}
-                # for workflow_name in workflows:
-                #     workflow = workflows[workflow_name]
-                #     description = None
-                #     if 'description' in workflow:
-                #         description = workflow['description']
-                #     wf_ids = awx.create_workflow(description=description, workflow_name=workflow_name)
-                #     logger.info('Created workflow with ID: ' + str(wf_ids[0]))
-                #     workflow_node_ids = awx.create_dag(workflow_id=wf_ids[0],
-                #                                        tosca_workflow=workflow,
-                #                                        topology_template_workflow_steps=topology_template_workflow_steps)
-                #     logger.info('Added nodes to workflow')
-                #     for wf_id in wf_ids:
-                #         wf_job_ids = awx.launch(wf_id)
-                #         logger.info('Launch workflows: '+str(wf_job_ids))
-                #         launched_ids += wf_job_ids
-                #     for launched_id in launched_ids:
-                #         while awx.get_job_status(launched_id) == 'running':
-                #             logger.info('Workflow: ' + str(launched_id) + ' status: '+ awx.get_job_status(launched_id))
-                #             sleep(5)
-                #         job_id = awx.get_attribute_job_id(launched_id)
-                #         if not job_id:
-                #             raise Exception('Could not find attribute job id from workflow: '+launched_id)
-                #
-                #         attributes.update(awx.get_job_artefacts(job_id))
-                #         logger.info('Updated attributes:' + str(attributes))
-                #
-                #     tosca_template_dict = awx.set_tosca_node_attributes(tosca_template_dict,attributes)
     except (Exception) as ex:
         track = traceback.format_exc()
         print(track)

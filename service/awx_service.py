@@ -251,8 +251,7 @@ class AWXService:
             try:
                 job_templates_ids = self.post(body, 'job_templates')
                 if credential:
-                    rnd_str = ''.join(
-                    random.SystemRandom().choice(string.ascii_letters + string.digits) for _ in range(5))
+                    rnd_str = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
                     credential_ids = self.add_credentials(credential=credential,
                                                           path='job_templates/'+str(job_templates_ids[0])+'/credentials',
                                                           organization_id=organization_id,name=operation_name+'_'+rnd_str)

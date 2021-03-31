@@ -2,12 +2,12 @@ import base64
 import json
 import logging
 import os
+import random
 import string
 import tempfile
 import time
 import uuid
 from base64 import b64encode
-from random import random
 
 import ansible.inventory.manager
 import networkx as nx

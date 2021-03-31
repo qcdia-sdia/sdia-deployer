@@ -2,10 +2,12 @@ import base64
 import json
 import logging
 import os
+import string
 import tempfile
 import time
 import uuid
 from base64 import b64encode
+from random import random
 
 import ansible.inventory.manager
 import networkx as nx
@@ -249,7 +251,11 @@ class AWXService:
             try:
                 job_templates_ids = self.post(body, 'job_templates')
                 if credential:
-                    credential_ids = self.add_credentials(credential=credential,path='job_templates/'+str(job_templates_ids[0])+'/credentials',organization_id=organization_id,name=operation_name)
+                    rnd_str = ''.join(
+                    random.SystemRandom().choice(string.ascii_letters + string.digits) for _ in range(5))
+                    credential_ids = self.add_credentials(credential=credential,
+                                                          path='job_templates/'+str(job_templates_ids[0])+'/credentials',
+                                                          organization_id=organization_id,name=operation_name+'_'+rnd_str)
                 return job_templates_ids
             except Exception as ex:
                 if 'Playbook not found for project' in str(ex):

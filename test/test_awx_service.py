@@ -97,7 +97,7 @@ class TestAWXService(unittest.TestCase):
                     sleep(5)
                 job_id = awx.get_attribute_job_id(launched_id)
                 if not job_id:
-                    raise Exception('Could not find attribute job id from workflow: ' + launched_id)
+                    raise Exception('Could not find attribute job id from workflow: ' + str(launched_id))
 
                 attributes.update(awx.get_job_artefacts(job_id))
                 logger.info('Updated attributes:' + str(attributes))

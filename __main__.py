@@ -67,7 +67,6 @@ def on_request(ch, method, props, body):
 
 
 def save_tosca_template(tosca_template_dict):
-
     tmp_path = tempfile.mkdtemp()
     tosca_template_path = tmp_path + os.path.sep + 'toscaTemplate.yml'
     logger.info('Saving tosca_template at: '+tosca_template_path)
@@ -142,72 +141,83 @@ def execute_workflows(workflows=None,topology_template_workflow_steps=None,awx=N
 
 
 def awx(tosca_template_path=None, tosca_template_dict=None):
-    tosca_service_is_up = ToscaHelper.service_is_up(sure_tosca_base_url)
-    logger.info('Deploying using awx.')
-    if tosca_service_is_up:
-        tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
-        node_templates = tosca_template_dict['topology_template']['node_templates']
-        node_templates = tosca_template_dict['topology_template']['node_templates']
+    try:
+        tosca_service_is_up = ToscaHelper.service_is_up(sure_tosca_base_url)
+        logger.info('Deploying using awx.')
 
-        credentials = []
-        for node_template_name in node_templates:
-            node_template = node_templates[node_template_name]
-            if 'attributes' in node_template and 'credentials' in node_template['attributes']:
-                credentials = node_template['attributes']['credentials']
+        if tosca_service_is_up:
+            tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
+            node_templates = tosca_template_dict['topology_template']['node_templates']
 
-        awx = AWXService(api_url=awx_base_url, username=awx_username, password=awx_password,tosca_helper=tosca_helper)
-        organization_id = awx.create_organization('sdia')
-        awx.add_credentials(credentials,organization_id=organization_id)
-        topology_template_workflow_steps = {}
-        for tosca_node_name in node_templates:
-            tosca_node = node_templates[tosca_node_name]
-            logger.info('Resolving function values for: '+tosca_node_name)
-            tosca_node = tosca_helper.resolve_function_values(tosca_node)
-            logger.info('Creating workflow steps for: ' + tosca_node_name)
-            node_workflow_steps = awx.create_workflow_steps(tosca_node,organization_id=organization_id)
-            topology_template_workflow_steps.update(node_workflow_steps)
+            awx = AWXService(api_url=awx_base_url, username=awx_username, password=awx_password,
+                             tosca_helper=tosca_helper)
+            organization_id = awx.create_organization('sdia')
+            topology_template_workflow_steps = {}
+            for tosca_node_name in node_templates:
+                tosca_node = node_templates[tosca_node_name]
+                logger.info('Resolving function values for: ' + tosca_node_name)
+                tosca_node = tosca_helper.resolve_function_values(tosca_node)
 
-        workflows = tosca_helper.get_workflows()
-        if workflows:
-            tosca_template_dict = execute_workflows(workflows=workflows,
-                                                    topology_template_workflow_steps=topology_template_workflow_steps,
-                                                    awx=awx)
-            # launched_ids = []
-            # attributes = {}
-            # for workflow_name in workflows:
-            #     workflow = workflows[workflow_name]
-            #     description = None
-            #     if 'description' in workflow:
-            #         description = workflow['description']
-            #     wf_ids = awx.create_workflow(description=description, workflow_name=workflow_name)
-            #     logger.info('Created workflow with ID: ' + str(wf_ids[0]))
-            #     workflow_node_ids = awx.create_dag(workflow_id=wf_ids[0],
-            #                                        tosca_workflow=workflow,
-            #                                        topology_template_workflow_steps=topology_template_workflow_steps)
-            #     logger.info('Added nodes to workflow')
-            #     for wf_id in wf_ids:
-            #         wf_job_ids = awx.launch(wf_id)
-            #         logger.info('Launch workflows: '+str(wf_job_ids))
-            #         launched_ids += wf_job_ids
-            #     for launched_id in launched_ids:
-            #         while awx.get_job_status(launched_id) == 'running':
-            #             logger.info('Workflow: ' + str(launched_id) + ' status: '+ awx.get_job_status(launched_id))
-            #             sleep(5)
-            #         job_id = awx.get_attribute_job_id(launched_id)
-            #         if not job_id:
-            #             raise Exception('Could not find attribute job id from workflow: '+launched_id)
-            #
-            #         attributes.update(awx.get_job_artefacts(job_id))
-            #         logger.info('Updated attributes:' + str(attributes))
-            #
-            #     tosca_template_dict = awx.set_tosca_node_attributes(tosca_template_dict,attributes)
+                credential = None
+                if 'attributes' in tosca_node:
+                    if 'credential' in tosca_node['attributes']:
+                        credential = tosca_node['attributes']['credential']
+                    if 'user_key_pair' in tosca_node['attributes']:
+                        credential = tosca_node['attributes']['user_key_pair']
+                if 'properties' in tosca_node:
+                    if 'credential' in tosca_node['properties']:
+                        credential = tosca_node['properties']['credential']
+                    if 'user_key_pair' in tosca_node['properties']:
+                        credential = tosca_node['properties']['user_key_pair']
 
-        response = {'toscaTemplate': tosca_template_dict}
-        output_current_milli_time = int(round(time.time() * 1000))
-        response["creationDate"] = output_current_milli_time
-        logger.info("Returning Deployment")
-        logger.info("Output message:" + json.dumps(response))
-        return json.dumps(response)
+                logger.info('Creating workflow steps for: ' + tosca_node_name)
+                node_workflow_steps = awx.create_workflow_steps(tosca_node, organization_id=organization_id,
+                                                                credential=credential)
+                topology_template_workflow_steps.update(node_workflow_steps)
+
+            workflows = tosca_helper.get_workflows()
+            if workflows:
+                tosca_template_dict = execute_workflows(workflows=workflows,
+                                                             topology_template_workflow_steps=topology_template_workflow_steps,
+                                                             awx=awx)
+                # launched_ids = []
+                # attributes = {}
+                # for workflow_name in workflows:
+                #     workflow = workflows[workflow_name]
+                #     description = None
+                #     if 'description' in workflow:
+                #         description = workflow['description']
+                #     wf_ids = awx.create_workflow(description=description, workflow_name=workflow_name)
+                #     logger.info('Created workflow with ID: ' + str(wf_ids[0]))
+                #     workflow_node_ids = awx.create_dag(workflow_id=wf_ids[0],
+                #                                        tosca_workflow=workflow,
+                #                                        topology_template_workflow_steps=topology_template_workflow_steps)
+                #     logger.info('Added nodes to workflow')
+                #     for wf_id in wf_ids:
+                #         wf_job_ids = awx.launch(wf_id)
+                #         logger.info('Launch workflows: '+str(wf_job_ids))
+                #         launched_ids += wf_job_ids
+                #     for launched_id in launched_ids:
+                #         while awx.get_job_status(launched_id) == 'running':
+                #             logger.info('Workflow: ' + str(launched_id) + ' status: '+ awx.get_job_status(launched_id))
+                #             sleep(5)
+                #         job_id = awx.get_attribute_job_id(launched_id)
+                #         if not job_id:
+                #             raise Exception('Could not find attribute job id from workflow: '+launched_id)
+                #
+                #         attributes.update(awx.get_job_artefacts(job_id))
+                #         logger.info('Updated attributes:' + str(attributes))
+                #
+                #     tosca_template_dict = awx.set_tosca_node_attributes(tosca_template_dict,attributes)
+    except (Exception) as ex:
+        track = traceback.format_exc()
+        print(track)
+        raise
+
+    response = {'toscaTemplate': tosca_template_dict}
+    logger.info("Returning Deployment")
+    logger.info("Output message:" + json.dumps(response))
+    return json.dumps(response)
 
 def decode_credentials(tosca_template_dict):
     logger.info('Decoding credentials.')

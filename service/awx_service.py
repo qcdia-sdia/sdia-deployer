@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import os
@@ -193,7 +194,7 @@ class AWXService:
         else:
             raise Exception(r.text)
 
-    def create_job_template(self, operation):
+    def create_job_template(self, operation=None,credential=None,organization_id=None):
         operation_name = list(operation.keys())[0]
         job_templates = self.get_resources('job_templates')
         for job in job_templates:
@@ -204,7 +205,6 @@ class AWXService:
                 return [job['id']]
 
         body = {
-
             'name': operation_name,
             'description': '',
             'job_type': 'run',
@@ -247,7 +247,10 @@ class AWXService:
         job_templates_ids = None
         while fail_count < 60:
             try:
-                return self.post(body, 'job_templates')
+                job_templates_ids = self.post(body, 'job_templates')
+                if credential:
+                    credential_ids = self.add_credentials(credential=credential,path='job_templates/'+str(job_templates_ids[0])+'/credentials',organization_id=organization_id,name=operation_name)
+                return job_templates_ids
             except Exception as ex:
                 if 'Playbook not found for project' in str(ex):
                     fail_count += 1
@@ -260,35 +263,38 @@ class AWXService:
                     raise ex
         return job_templates_ids
 
-    def create_workflow_steps(self, tosca_node,organization_id=None):
+    def create_workflow_steps(self, tosca_node,organization_id=None,credential=None):
         if 'interfaces' in tosca_node:
             workflow_steps = {}
             interfaces = tosca_node['interfaces']
             for interface_name in interfaces:
-                self.tosca_helper.get_interface_ancestors(interface_name)
-                for step_name in interfaces[interface_name]:
-                    workflow_step = {}
-                    step = interfaces[interface_name][step_name]
-                    wf_name = interface_name + '.' + step_name
-                    logger.info('Creating steps: ' + wf_name)
-                    if 'inputs' in step and 'repository' in step['inputs']:
-                        repository_url = step['inputs']['repository']
-                        project_id = self.create_project(project_name=repository_url, scm_url=repository_url,
-                                                         scm_branch='master', scm_type='git',organization_id=organization_id)
-                        workflow_step[wf_name] = {'project': project_id[0]}
-
-                        inventory = step['inputs']['inventory']
-                        inventory_id = self.create_inventory(inventory_name=wf_name, inventory=inventory,organization_id=organization_id)
-                        workflow_step[wf_name]['inventory'] = inventory_id
-                    if 'extra_variables' in step['inputs']:
-                        extra_variables = interfaces[interface_name][step_name]
-                        print(extra_variables)
-                    if 'implementation' in step['inputs']:
-                        workflow_step[wf_name]['implementation'] = step['inputs'][
-                            'implementation']
-                        workflow_step[wf_name]['job_template'] = self.create_job_template(workflow_step)[0]
-                    if workflow_step:
-                        workflow_steps.update(workflow_step)
+                ancestors = self.tosca_helper.get_interface_ancestors(interface_name)
+                if 'tosca.interfaces.QC.Ansible' in ancestors:
+                    for step_name in interfaces[interface_name]:
+                        workflow_step = {}
+                        step = interfaces[interface_name][step_name]
+                        wf_name = interface_name + '.' + step_name
+                        logger.info('Creating steps: ' + wf_name)
+                        if 'inputs' in step and 'repository' in step['inputs']:
+                            repository_url = step['inputs']['repository']
+                            project_id = self.create_project(project_name=repository_url, scm_url=repository_url,
+                                                             scm_branch='master', scm_type='git',organization_id=organization_id)
+                            workflow_step[wf_name] = {'project': project_id[0]}
+                            if not 'inventory' in step['inputs']:
+                                raise Exception(step_name + ' has no inventory')
+                            inventory = step['inputs']['inventory']
+                            inventory_id = self.create_inventory(inventory_name=wf_name, inventory=inventory,organization_id=organization_id)
+                            workflow_step[wf_name]['inventory'] = inventory_id
+                        if 'extra_variables' in step['inputs']:
+                            extra_variables = step['inputs']['extra_variables']
+                            print(extra_variables)
+                        if 'implementation' in step['inputs']:
+                            workflow_step[wf_name]['implementation'] = step['inputs'][
+                                'implementation']
+                            workflow_step[wf_name]['job_template'] = self.create_job_template(workflow_step,
+                                                                                              credential=credential,organization_id=organization_id)[0]
+                        if workflow_step:
+                            workflow_steps.update(workflow_step)
             return workflow_steps
 
     def update_project(self, project_id):
@@ -315,6 +321,7 @@ class AWXService:
         return success_node_ids
 
     def create_dag(self,workflow_id=None,tosca_workflow=None,topology_template_workflow_steps=None):
+        # Don't look at this you face will melt
         graph = nx.DiGraph()
         steps = tosca_workflow['steps']
         for step_name in steps:
@@ -327,47 +334,33 @@ class AWXService:
                     graph = self.add_edge(graph=graph,parent_name=step_name, children=activity['on_success'],label='on_success')
                 if 'on_failure' in activity:
                     graph = self.add_edge(graph=graph,parent_name=step_name, children=activity['on_failure'],label='on_failure')
+
         for step_name in graph:
             if graph.in_degree(step_name) == 0:
                 step = steps[step_name]
                 activities = step['activities']
                 for activity in activities:
-                    parent_node_ids = None
+                    parent_node_ids = []
                     if 'call_operation' in activity:
                         call_operation = activity['call_operation']
-                        parent_node_ids = self.create_root_workflow_node(workflow_id=workflow_id,
-                                                                         job_template_id=topology_template_workflow_steps[call_operation]['job_template'],
-                                                                         step_name=step_name)
-                    on_success_children = None
-                    on_failure_children = None
-                    if parent_node_ids:
-                        if 'on_success' in activity:
-                            on_success_children = activity['on_success']
-                        if 'on_failure' in activity:
-                            on_failure_children = activity['on_failure']
-
-
-                        if on_success_children:
-                            label = 'on_success'
-                            children=activity[label]
-                            if isinstance(children, list):
+                        parent_node_ids.append(self.create_root_workflow_node(workflow_id=workflow_id,
+                                                                            job_template_id=topology_template_workflow_steps[call_operation]['job_template'],
+                                                                            step_name=step_name)[0])
+                    for parent_node in parent_node_ids:
+                        for outcome in ['on_failure', 'on_success']:
+                            if outcome in activity:
+                                node_children = activity[outcome]
+                                children = []
+                                if isinstance(node_children, str):
+                                    children.append(node_children)
+                                elif isinstance(node_children, list):
+                                    children = node_children
                                 for child in children:
-                                    workflow_node_ids = self.create_workflow_nodes(parent_id=parent_node_ids[0],
-                                                                                   child=child,
-                                                                                   label=label,
-                                                                                   steps=steps,
-                                                                                   topology_template_workflow_steps=topology_template_workflow_steps)
-
-                        if on_failure_children:
-                            label = 'on_failure'
-                            children=activity[label]
-                            if isinstance(children, list):
-                                for child in children:
-                                    workflow_node_ids = self.create_workflow_nodes(parent_id=parent_node_ids[0],
-                                                                                   child=child,
-                                                                                   label=label,
-                                                                                   steps=steps,
-                                                                                   topology_template_workflow_steps=topology_template_workflow_steps)
+                                    workflow_node_ids = self.create_workflow_nodes(parent_id=parent_node,
+                                                                                    child=child,
+                                                                                    label=outcome,
+                                                                                    steps=steps,
+                                                                                    topology_template_workflow_steps=topology_template_workflow_steps)
         return None
 
     def add_edge(self,graph=None,parent_name=None, children=None,label=None):
@@ -410,42 +403,20 @@ class AWXService:
                 child_id = self.add_child_node(identifier=child,
                                                unified_job_template=topology_template_workflow_steps[call_operation]['job_template'],
                                                path=path)
-                on_success_children = None
-                on_failure_children = None
-                if 'on_success' in activity:
-                    on_success_children = activity['on_success']
-                if 'on_failure' in activity:
-                    on_failure_children = activity['on_failure']
-                if on_success_children:
-                    if isinstance(on_success_children, list) and child_id:
-                        for child in on_success_children:
+                for outcome in ['on_failure','on_success']:
+                    if outcome in activity:
+                        node_children = activity[outcome]
+                        children = []
+                        if isinstance(node_children, str):
+                            children.append(node_children)
+                        elif isinstance(node_children, list):
+                            children = node_children
+                        for child in children:
                             self.create_workflow_nodes(parent_id=child_id,
                                                        child=child,
-                                                       label='on_success',
+                                                       label=outcome,
                                                        steps=steps,
                                                        topology_template_workflow_steps=topology_template_workflow_steps)
-                    if isinstance(on_success_children, str) and child_id:
-                        child = on_success_children
-                        self.create_workflow_nodes(parent_id=child_id,
-                                                   child=child,
-                                                   label='on_success',
-                                                   steps=steps,
-                                                   topology_template_workflow_steps=topology_template_workflow_steps)
-                if on_failure_children:
-                    if isinstance(on_failure_children, list) and child_id:
-                        for child in on_failure_children:
-                            self.create_workflow_nodes(parent_id=child_id,
-                                                       child=child,
-                                                       label='on_failure',
-                                                       steps=steps,
-                                                       topology_template_workflow_steps=topology_template_workflow_steps)
-                    if isinstance(on_failure_children, str) and child_id:
-                        child = on_success_children
-                        self.create_workflow_nodes(parent_id=child_id,
-                                                   child=child,
-                                                   label='on_failure',
-                                                   steps=steps,
-                                                   topology_template_workflow_steps=topology_template_workflow_steps)
         return None
 
     def add_child_node(self, identifier, unified_job_template, path):
@@ -515,28 +486,36 @@ class AWXService:
             node_templates[node_name]['attributes'] = node_attributes
         return tosca_template_dict
 
-    def add_credentials(self, credentials,organization_id=None):
-        credential_ids = []
-        if credentials:
-            path = 'credentials'
-            for credential in credentials:
-                body = {}
-                if 'cloud_provider_name' in credential:
-                    if credential['cloud_provider_name'] == 'Azure':
-                        body = {
-                            "name": credential['cloud_provider_name'],
-                            "organization": organization_id,
-                            "credential_type": 11,
-                            "inputs": {
-                                "client": credential['user'],
-                                "secret": credential['token'],
-                                "tenant": credential['extra_properties']['tenant'],
-                                "subscription": credential['extra_properties']['subscription_id']
-                            }
+    def add_credentials(self, credential=None,organization_id=None,path=None,name=None):
+        if credential:
+            body = {}
+            if 'protocol' in credential and 'ssh' == credential['protocol']:
+                decoded_key = base64.b64decode(credential['keys']['private_key'])
+                decoded_key_str = str(decoded_key, "utf-8")
+                body = {
+                    "name": name,
+                    "organization": organization_id,
+                    "credential_type": 1,
+                    "inputs": {
+                        "ssh_key_data": decoded_key_str,
                     }
-                        credential_id = self.post(body, path)
-                        credential_ids.append(credential_id)
-        return credential_ids
+                }
+            if 'cloud_provider_name' in credential:
+                if credential['cloud_provider_name'] == 'Azure':
+                    body = {
+                        "name": name,
+                        "organization": organization_id,
+                        "credential_type": 11,
+                        "inputs": {
+                            "client": credential['user'],
+                            "secret": credential['token'],
+                            "tenant": credential['extra_properties']['tenant'],
+                            "subscription": credential['extra_properties']['subscription_id']
+                        }
+                }
+            credential_id = self.post(body, path)
+            return credential_id
+        return None
 
     def create_organization(self, name):
         body = {

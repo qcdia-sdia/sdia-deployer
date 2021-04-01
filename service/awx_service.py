@@ -85,6 +85,7 @@ class AWXService:
             'variables': '',
             'insights_credential': None
         }
+        self.delete('inventories','?name='+inventory_name)
         inventory_id = self.post(body, 'inventories')[0]
         for group_name in inventory_manager.groups:
             group = inventory_manager.groups[group_name]
@@ -119,7 +120,6 @@ class AWXService:
 
 
     def post(self, body, api_path):
-
         r = self._session.post(self.api_url + '/' + api_path + '/', data=json.dumps(body), headers=self.headers,verify=False)
         ids = []
         if r.status_code == 201 or r.status_code == 202 or r.status_code == 204:
@@ -152,6 +152,7 @@ class AWXService:
             'description': '',
             'variables': json.dumps(group.vars)
         }
+        self.delete('inventories', '?name=' + group_name)
         inventory_group_ids = self.post(body, 'inventories/' + str(inventory_id) + '/groups')
         return inventory_group_ids
 
@@ -170,6 +171,7 @@ class AWXService:
                 'instance_id': '',
                 'variables': json.dumps(host.vars)
             }
+            self.delete('hosts', '?name=' + host.address)
             inventory_hosts_ids = self.post(body, 'hosts')
             return inventory_hosts_ids
         if inventory_group_id:
@@ -180,6 +182,7 @@ class AWXService:
                 'instance_id': '',
                 'variables': json.dumps(host.vars)
             }
+            self.delete('groups', '?name=' + host.address)
             inventory_hosts_ids = self.post(body, 'groups/' + str(inventory_group_id) + '/hosts')
         return inventory_hosts_ids
 
@@ -518,6 +521,11 @@ class AWXService:
                             "subscription": credential['extra_properties']['subscription_id']
                         }
                 }
+            credentials = self.get_resources(path)
+            if credentials:
+                for credential in credentials:
+                    r = self._session.delete(self.api_url + '/credentials/'+ str(credential['id']),
+                                             headers=self.headers, verify=False)
             credential_id = self.post(body, path)
             return credential_id
         return None
@@ -530,3 +538,11 @@ class AWXService:
         }
         organization_id = self.post(body, 'organizations')
         return organization_id[0]
+
+    def delete(self, api_path,query):
+        resources = self.get_resources(api_path+'/'+query)
+        if resources:
+            for inventory in resources:
+                r = self._session.delete(self.api_url +'/'+api_path+'/' + str(inventory['id']), headers=self.headers, verify=False)
+        # else:
+        #     raise Exception('Response Code:'+ str(r.status_code) +' '+r.text + '\nRequest Body: ' + str(body))

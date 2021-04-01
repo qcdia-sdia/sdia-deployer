@@ -13,6 +13,7 @@ import ansible.inventory.manager
 import networkx as nx
 import requests
 import tower_cli.exceptions
+import validators
 import yaml
 from ansible.inventory.manager import InventoryManager
 from ansible.parsing.dataloader import DataLoader
@@ -199,15 +200,8 @@ class AWXService:
         else:
             raise Exception(r.text)
 
-    def create_job_template(self, operation=None,credential=None,organization_id=None):
+    def create_job_template(self, operation=None,credential=None,organization_id=None,extra_vars=None):
         operation_name = list(operation.keys())[0]
-        job_templates = self.get_resources('job_templates')
-        for job in job_templates:
-            if job['name'] == operation_name and \
-                    job['inventory'] == operation[operation_name]['inventory'] and \
-                    job['project'] == operation[operation_name]['project'] and \
-                    job['playbook'] == operation[operation_name]['implementation']:
-                return [job['id']]
 
         body = {
             'name': operation_name,
@@ -220,7 +214,7 @@ class AWXService:
             'forks': 0,
             'limit': '',
             'verbosity': 0,
-            'extra_vars': '',
+            'extra_vars': json.dumps(extra_vars),
             'job_tags': '',
             'force_handlers': False,
             'skip_tags': '',
@@ -252,12 +246,17 @@ class AWXService:
         job_templates_ids = None
         while fail_count < 60:
             try:
-                job_templates_ids = self.post(body, 'job_templates')
+                job_template = \
+                self.get_resources('job_templates/?name=' + operation_name + '&organization=' + str(organization_id))[0]
+                if job_template:
+                    job_templates_ids = self.put(body, 'job_templates/'+str(job_template['id']))
+                else:
+                    job_templates_ids = self.post(body, 'job_templates')
                 if credential:
-                    rnd_str = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
+                    # rnd_str = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
                     credential_ids = self.add_credentials(credential=credential,
                                                           path='job_templates/'+str(job_templates_ids[0])+'/credentials',
-                                                          organization_id=organization_id,name=operation_name+'_'+rnd_str)
+                                                          organization_id=organization_id,name=operation_name)
                 return job_templates_ids
             except Exception as ex:
                 if 'Playbook not found for project' in str(ex):
@@ -283,6 +282,7 @@ class AWXService:
                         step = interfaces[interface_name][step_name]
                         wf_name = interface_name + '.' + step_name
                         logger.info('Creating steps: ' + wf_name)
+                        extra_variables = None
                         if 'inputs' in step and 'repository' in step['inputs']:
                             repository_url = step['inputs']['repository']
                             project_id = self.create_project(project_name=repository_url, scm_url=repository_url,
@@ -293,14 +293,15 @@ class AWXService:
                             inventory = step['inputs']['inventory']
                             inventory_id = self.create_inventory(inventory_name=wf_name, inventory=inventory,organization_id=organization_id)
                             workflow_step[wf_name]['inventory'] = inventory_id
-                        if 'extra_variables' in step['inputs']:
-                            extra_variables = step['inputs']['extra_variables']
-                            print(extra_variables)
                         if 'implementation' in step['inputs']:
+                            if 'extra_variables' in step['inputs']:
+                                extra_variables = self.get_variables(extra_variables=step['inputs']['extra_variables'])
                             workflow_step[wf_name]['implementation'] = step['inputs'][
                                 'implementation']
                             workflow_step[wf_name]['job_template'] = self.create_job_template(workflow_step,
-                                                                                              credential=credential,organization_id=organization_id)[0]
+                                                                                              credential=credential,
+                                                                                              organization_id=organization_id,
+                                                                                              extra_vars=extra_variables)[0]
                         if workflow_step:
                             workflow_steps.update(workflow_step)
             return workflow_steps
@@ -526,7 +527,8 @@ class AWXService:
                 for credential in credentials:
                     r = self._session.delete(self.api_url + '/credentials/'+ str(credential['id']),
                                              headers=self.headers, verify=False)
-            credential_id = self.post(body, path)
+            else:
+                credential_id = self.post(body, path)
             return credential_id
         return None
 
@@ -546,3 +548,30 @@ class AWXService:
                 r = self._session.delete(self.api_url +'/'+api_path+'/' + str(inventory['id']), headers=self.headers, verify=False)
         # else:
         #     raise Exception('Response Code:'+ str(r.status_code) +' '+r.text + '\nRequest Body: ' + str(body))
+
+    def get_variables(self, extra_variables):
+        valid = validators.url(extra_variables)
+        if valid == True:
+            url = requests.get(extra_variables)
+            text = url.text
+            try:
+                tup_json = json.loads(text)
+                return tup_json
+            except:
+                return yaml.load(text)
+        else:
+            return extra_variables
+
+    def put(self, body, api_path):
+        r = self._session.put(self.api_url + '/' + api_path + '/', data=json.dumps(body), headers=self.headers,verify=False)
+        ids = []
+        if r.status_code == 200:
+            if r.text:
+                json_resp = r.json()
+                if 'id' in json_resp:
+                    id = json_resp['id']
+                    ids.append(id)
+            return ids
+        else:
+            raise Exception('Response Code:'+ str(r.status_code) +' '+r.text + '\nRequest Body: ' + str(body))
+        pass

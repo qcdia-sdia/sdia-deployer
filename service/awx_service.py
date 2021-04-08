@@ -86,8 +86,11 @@ class AWXService:
             'variables': '',
             'insights_credential': None
         }
-        self.delete('inventories','?name='+inventory_name)
-        inventory_id = self.post(body, 'inventories')[0]
+        inventory_ids = self.get_resources('inventories/?name='+inventory_name+'&organization='+str(organization_id))
+        if inventory_ids and inventory_ids[0]:
+            inventory_id = self.put(body, 'inventories/'+str(inventory_ids[0]['id']))[0]
+        else:
+            inventory_id = self.post(body, 'inventories')[0]
         for group_name in inventory_manager.groups:
             group = inventory_manager.groups[group_name]
             if group_name == 'all' or group_name == 'ungrouped':
@@ -172,7 +175,10 @@ class AWXService:
                 'instance_id': '',
                 'variables': json.dumps(host.vars)
             }
-            self.delete('hosts', '?name=' + host.address)
+            # hosts = self.get_resources('hosts/?name='+host.address)
+            # if hosts and hosts[0]:
+            #     inventory_hosts_ids = self.put(body, 'hosts/'+str(hosts[0]['id']))
+            # else:
             inventory_hosts_ids = self.post(body, 'hosts')
             return inventory_hosts_ids
         if inventory_group_id:
@@ -246,9 +252,10 @@ class AWXService:
         job_templates_ids = None
         while fail_count < 60:
             try:
-                job_template = \
-                self.get_resources('job_templates/?name=' + operation_name + '&organization=' + str(organization_id))[0]
-                if job_template:
+                job_templates = \
+                self.get_resources('job_templates/?name=' + operation_name + '&organization=' + str(organization_id))
+                if job_templates:
+                    job_template = job_templates[0]
                     job_templates_ids = self.put(body, 'job_templates/'+str(job_template['id']))
                 else:
                     job_templates_ids = self.post(body, 'job_templates')
@@ -468,7 +475,7 @@ class AWXService:
     #     workflow_nodes = self.get_resources(path)
     #     return workflow_nodes
 
-    def get_job_artefacts(self, attributes_job_id):
+    def get_job_artifacts(self, attributes_job_id):
         job_output = self.get_resources('jobs/'+str(attributes_job_id)+'/')
         return job_output['artifacts']
 
@@ -522,14 +529,12 @@ class AWXService:
                             "subscription": credential['extra_properties']['subscription_id']
                         }
                 }
-            credentials = self.get_resources(path)
-            if credentials:
-                for credential in credentials:
-                    r = self._session.delete(self.api_url + '/credentials/'+ str(credential['id']),
-                                             headers=self.headers, verify=False)
+            credentials = self.get_resources('credentials/?name='+name+'&organization='+str(organization_id))
+            if credentials and credentials[0]:
+                credential_ids = self.put(body,'credentials/'+str(credentials[0]['id']))
             else:
-                credential_id = self.post(body, path)
-            return credential_id
+                credential_ids = self.post(body, path)
+            return credential_ids
         return None
 
     def create_organization(self, name):
@@ -550,16 +555,17 @@ class AWXService:
         #     raise Exception('Response Code:'+ str(r.status_code) +' '+r.text + '\nRequest Body: ' + str(body))
 
     def get_variables(self, extra_variables):
-        valid = validators.url(extra_variables)
-        if valid == True:
-            url = requests.get(extra_variables)
-            text = url.text
-            try:
-                tup_json = json.loads(text)
-                return tup_json
-            except:
-                return yaml.load(text)
-        else:
+        if not isinstance(extra_variables,dict):
+            valid = validators.url(extra_variables)
+            if valid == True:
+                url = requests.get(extra_variables)
+                text = url.text
+                try:
+                    tup_json = json.loads(text)
+                    return tup_json
+                except:
+                    return yaml.load(text)
+        elif isinstance(extra_variables, dict):
             return extra_variables
 
     def put(self, body, api_path):

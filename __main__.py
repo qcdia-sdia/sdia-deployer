@@ -106,10 +106,10 @@ def save_tosca_template(tosca_template_dict):
 #         raise
 
 
-def execute_workflows(workflows=None, topology_template_workflow_steps=None, awx=None):
+def execute_workflows(workflows=None, topology_template_workflow_steps=None, awx=None,tosca_template_dict=None):
     launched_ids = []
     attributes = {}
-    tosca_template_dict = {}
+    # tosca_template_dict = {}
     for workflow_name in workflows:
         workflow = workflows[workflow_name]
         description = None
@@ -133,7 +133,7 @@ def execute_workflows(workflows=None, topology_template_workflow_steps=None, awx
             if not job_id:
                 raise Exception('Could not find attribute job id from workflow: ' + str(launched_id))
 
-            attributes.update(awx.get_job_artefacts(job_id))
+            attributes.update(awx.get_job_artifacts(job_id))
             logger.info('Updated attributes:' + str(attributes))
 
         tosca_template_dict = awx.set_tosca_node_attributes(tosca_template_dict, attributes)
@@ -179,7 +179,8 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
             if workflows:
                 tosca_template_dict = execute_workflows(workflows=workflows,
                                                              topology_template_workflow_steps=topology_template_workflow_steps,
-                                                             awx=awx)
+                                                             awx=awx,
+                                                            tosca_template_dict=tosca_template_dict)
     except (Exception) as ex:
         track = traceback.format_exc()
         print(track)

@@ -255,15 +255,16 @@ def threaded_function(args):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
-    global channel, queue_name, connection, rabbitmq_host, sure_tosca_base_url,semaphore_base_url, semaphore_username, \
-        semaphore_password, awx_base_url, awx_username, awx_password, secret
+    global channel, queue_name, connection, rabbitmq_host, sure_tosca_base_url,\
+        awx_base_url, awx_username, awx_password, secret
+        # semaphore_base_url, semaphore_username, semaphore_password
 
     config = configparser.ConfigParser()
     config.read('properties.ini')
     sure_tosca_base_url = config['tosca-sure']['base_url']
-    semaphore_base_url = config['semaphore']['base_url']
-    semaphore_username = config['semaphore']['username']
-    semaphore_password = config['semaphore']['password']
+    # semaphore_base_url = config['semaphore']['base_url']
+    # semaphore_username = config['semaphore']['username']
+    # semaphore_password = config['semaphore']['password']
 
     awx_base_url = config['awx']['base_url']
     awx_username = config['awx']['username']
@@ -275,8 +276,7 @@ if __name__ == "__main__":
 
     secret = config['credential']['secret']
 
-    logger.info('Properties sure_tosca_base_url: ' + sure_tosca_base_url + ', semaphore_base_url: ' + semaphore_base_url
-                + ', rabbitmq_host: ' + rabbitmq_host+ ', queue_name: '+queue_name)
+    logger.info('Properties sure_tosca_base_url: ' + sure_tosca_base_url + ', rabbitmq_host: ' + rabbitmq_host+ ', queue_name: '+queue_name)
 
     channel, connection = init_channel(rabbitmq_host, queue_name)
     logger.info("v1.0.3")

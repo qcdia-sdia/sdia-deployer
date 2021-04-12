@@ -208,7 +208,11 @@ def handle_delivery(message):
 
     tosca_template_path = save_tosca_template(tosca_template_dict)
     # if 'workflows' in tosca_template_dict['topology_template']:
-    return awx(tosca_template_dict=tosca_template_dict, tosca_template_path=tosca_template_path)
+    try:
+        return awx(tosca_template_dict=tosca_template_dict, tosca_template_path=tosca_template_path)
+    except (Exception) as ex:
+        tosca_template_dict['error'] = str(ex)
+        return tosca_template_dict
 
 def threaded_function(args):
     while not done:

@@ -440,6 +440,7 @@ class AWXService:
         child_id = None
         if res:
             child_id = res[0]['id']
+            logger.info('-----------------Found child: '+identifier)
 
         body = {
             'id': child_id,
@@ -456,6 +457,7 @@ class AWXService:
             'all_parents_must_converge': True,
             'identifier': identifier
         }
+
         res = self.post(body, path)
         if not child_id and res:
             child_id = res[0]

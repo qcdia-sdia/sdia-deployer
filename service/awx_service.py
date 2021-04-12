@@ -476,7 +476,7 @@ class AWXService:
         job_output = self.get_resources('jobs/'+str(attributes_job_id)+'/')
         return job_output['artifacts']
 
-    def get_attribute_job_ids(self, wf_job_id):
+    def get_attributes_job_ids(self, wf_job_id):
         attribute_job_ids = []
         workflow_nodes = self.get_resources('workflow_jobs/'+str(wf_job_id)+'/workflow_nodes/')
         for wf_node in workflow_nodes:

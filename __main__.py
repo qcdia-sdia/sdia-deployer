@@ -74,42 +74,9 @@ def save_tosca_template(tosca_template_dict):
         yaml.dump(tosca_template_dict, outfile, default_flow_style=False)
     return  tosca_template_path
 
-
-# def semaphore(tosca_template_path=None, tosca_template_dict=None):
-#     logger.info('Deploying using semaphore.')
-#     tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
-#     # nodes = tosca_helper.get_application_nodes()
-#     nodes = tosca_helper.get_deployment_node_pipeline()
-#
-#     deployService = DeployService(semaphore_base_url=semaphore_base_url, semaphore_username=semaphore_username,
-#                                   semaphore_password=semaphore_password, vms=tosca_helper.get_vms())
-#     try:
-#         for node in nodes:
-#             updated_node = deployService.deploy(node)
-#             if isinstance(updated_node, list):
-#                 for node in updated_node:
-#                     tosca_template_dict = tosca_helper.set_node(node, tosca_template_dict)
-#                     # logger.info("tosca_template_dict :" + json.dumps(tosca_template_dict))
-#             else:
-#                 tosca_template_dict = tosca_helper.set_node(updated_node, tosca_template_dict)
-#                 # logger.info("tosca_template_dict :" + json.dumps(tosca_template_dict))
-#
-#         response = {'toscaTemplate': tosca_template_dict}
-#         output_current_milli_time = int(round(time.time() * 1000))
-#         response["creationDate"] = output_current_milli_time
-#         logger.info("Returning Deployment")
-#         logger.info("Output message:" + json.dumps(response))
-#         return json.dumps(response)
-#     except Exception as e:
-#         track = traceback.format_exc()
-#         print(track)
-#         raise
-
-
 def execute_workflows(workflows=None, topology_template_workflow_steps=None, awx=None,tosca_template_dict=None):
     launched_ids = []
     attributes = {}
-    # tosca_template_dict = {}
     for workflow_name in workflows:
         workflow = workflows[workflow_name]
         description = None
@@ -243,9 +210,6 @@ def handle_delivery(message):
     # if 'workflows' in tosca_template_dict['topology_template']:
     return awx(tosca_template_dict=tosca_template_dict, tosca_template_path=tosca_template_path)
 
-    # return semaphore(tosca_template_dict=tosca_template_dict, tosca_template_path=tosca_template_path)
-
-
 def threaded_function(args):
     while not done:
         connection.process_data_events()
@@ -257,14 +221,10 @@ if __name__ == "__main__":
 
     global channel, queue_name, connection, rabbitmq_host, sure_tosca_base_url,\
         awx_base_url, awx_username, awx_password, secret
-        # semaphore_base_url, semaphore_username, semaphore_password
 
     config = configparser.ConfigParser()
     config.read('properties.ini')
     sure_tosca_base_url = config['tosca-sure']['base_url']
-    # semaphore_base_url = config['semaphore']['base_url']
-    # semaphore_username = config['semaphore']['username']
-    # semaphore_password = config['semaphore']['password']
 
     awx_base_url = config['awx']['base_url']
     awx_username = config['awx']['username']
@@ -279,7 +239,6 @@ if __name__ == "__main__":
     logger.info('Properties sure_tosca_base_url: ' + sure_tosca_base_url + ', rabbitmq_host: ' + rabbitmq_host+ ', queue_name: '+queue_name)
 
     channel, connection = init_channel(rabbitmq_host, queue_name)
-    logger.info("v1.0.3")
     logger.info("Awaiting RPC requests")
     try:
         thread = Thread(target=threaded_function, args=(1,))

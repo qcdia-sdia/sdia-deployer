@@ -472,22 +472,18 @@ class AWXService:
         wf_job_ids = self.post(body, path)
         return wf_job_ids
 
-    # def get_workflow_nodes(self, launched_id):
-    #     path = 'workflow_jobs/'+str(launched_id)+'/workflow_nodes'
-    #     workflow_nodes = self.get_resources(path)
-    #     return workflow_nodes
-
     def get_job_artifacts(self, attributes_job_id):
         job_output = self.get_resources('jobs/'+str(attributes_job_id)+'/')
         return job_output['artifacts']
 
-    def get_attribute_job_id(self, wf_job_id):
+    def get_attribute_job_ids(self, wf_job_id):
+        attribute_job_ids = []
         workflow_nodes = self.get_resources('workflow_jobs/'+str(wf_job_id)+'/workflow_nodes/')
         for wf_node in workflow_nodes:
             if not wf_node['success_nodes'] and not wf_node['failure_nodes'] and not wf_node['always_nodes'] and 'job' \
                     in wf_node and 'attributes' in wf_node['identifier']:
-                return wf_node['job']
-        return None
+                attribute_job_ids.append(wf_node['job'])
+        return attribute_job_ids
 
     def get_job_status(self, launched_id):
         workflow = self.get_resources('workflow_jobs/' + str(launched_id) + '/')

@@ -27,16 +27,6 @@ logger = logging.getLogger(__name__)
 
 done = False
 
-
-# if not getattr(logger, 'handler_set', None):
-# logger.setLevel(logging.INFO)
-# h = logging.StreamHandler()
-# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# h.setFormatter(formatter)
-# logger.addHandler(h)
-# logger.handler_set = True
-
-
 def init_channel(rabbitmq_host, queue_name):
     connection = pika.BlockingConnection(pika.ConnectionParameters(host=rabbitmq_host))
     channel = connection.channel()
@@ -96,12 +86,12 @@ def execute_workflows(workflows=None, topology_template_workflow_steps=None, awx
             while awx.get_job_status(launched_id) == 'running':
                 logger.info('Workflow: ' + str(launched_id) + ' status: ' + awx.get_job_status(launched_id))
                 sleep(5)
-            job_id = awx.get_attribute_job_id(launched_id)
-            if not job_id:
+            attributes_job_ids = awx.get_attributes_job_ids(launched_id)
+            if not attributes_job_ids:
                 raise Exception('Could not find attribute job id from workflow: ' + str(launched_id))
-
-            attributes.update(awx.get_job_artifacts(job_id))
-            logger.info('Updated attributes:' + str(attributes))
+            for job_id in attributes_job_ids:
+                attributes.update(awx.get_job_artifacts(job_id))
+                logger.info('Updated attributes:' + str(attributes))
 
         tosca_template_dict = awx.set_tosca_node_attributes(tosca_template_dict, attributes)
     return tosca_template_dict

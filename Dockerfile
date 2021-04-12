@@ -14,8 +14,9 @@ COPY . /usr/src/app
 
 
 CMD sed -i "s#http://127.0.0.1:8081/tosca-sure/1.0.0#$SURE_TOSCA_BASE_PATH#g" properties.ini && \
-    sed -i "s#http://127.0.0.1:3000/api#$SEMAPHORE_BASE_PATH#g" properties.ini && \
+#    sed -i "s#http://127.0.0.1:3000/api#$SEMAPHORE_BASE_PATH#g" properties.ini && \
     sed -i "s#http://localhost:8052/api/v2#$AWX_BASE_PATH#g" properties.ini && \
+    sed -i "s#https://localhost:8052/api/v2#$AWX_BASE_PATH#g" properties.ini && \
     sed -i "s#username = admin#username = $AWX_USERNAME#g" properties.ini && \
     sed -i "s#password = password#password = $AWX_PASSWORD#g" properties.ini && \
     sed -i "s#host = 127.0.0.1#host = $RABBITMQ_HOST#g" properties.ini && \

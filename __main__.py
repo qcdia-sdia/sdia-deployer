@@ -91,8 +91,6 @@ def execute_workflows(workflows=None, topology_template_workflow_steps=None, awx
                 raise Exception('Could not find attribute job id from workflow: ' + str(launched_id))
             for job_id in attributes_job_ids:
                 attributes.update(awx.get_job_artifacts(job_id))
-                logger.info('Updated attributes:' + str(attributes))
-
         tosca_template_dict = awx.set_tosca_node_attributes(tosca_template_dict, attributes)
     return tosca_template_dict
 

@@ -86,6 +86,9 @@ def execute_workflows(workflows=None, topology_template_workflow_steps=None, awx
             while awx.get_job_status(launched_id) == 'running':
                 logger.info('Workflow: ' + str(launched_id) + ' status: ' + awx.get_job_status(launched_id))
                 sleep(5)
+            job_status = awx.get_job_status(launched_id)
+            if 'failed' == job_status:
+                raise Exception('Workflow execution failed')
             attributes_job_ids = awx.get_attributes_job_ids(launched_id)
             if not attributes_job_ids:
                 raise Exception('Could not find attribute job id from workflow: ' + str(launched_id))

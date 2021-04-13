@@ -88,9 +88,8 @@ class AWXService:
         }
         inventory_ids = self.get_resources('inventories/?name='+inventory_name+'&organization='+str(organization_id))
         if inventory_ids and inventory_ids[0]:
-            inventory_id = self.put(body, 'inventories/'+str(inventory_ids[0]['id']))[0]
-        else:
-            inventory_id = self.post(body, 'inventories')[0]
+            r = self._session.delete(self.api_url +'/inventories/' +str(inventory_ids[0]['id']), headers=self.headers, verify=False)
+        inventory_id = self.post(body, 'inventories')[0]
         for group_name in inventory_manager.groups:
             group = inventory_manager.groups[group_name]
             if group_name == 'all' or group_name == 'ungrouped':
@@ -176,9 +175,9 @@ class AWXService:
                 'variables': json.dumps(host.vars)
             }
             # hosts = self.get_resources('hosts/?name='+host.address)
-            # if hosts and hosts[0]:
-            #     inventory_hosts_ids = self.put(body, 'hosts/'+str(hosts[0]['id']))
-            # else:
+            # if hosts and hosts[0] and hosts[0]['inventory']==inventory_id:
+            #     r = self._session.delete(self.api_url + '/hosts/' + str(hosts[0]['id']),
+            #                              headers=self.headers, verify=False)
             inventory_hosts_ids = self.post(body, 'hosts')
             return inventory_hosts_ids
         if inventory_group_id:
@@ -506,6 +505,7 @@ class AWXService:
             if 'protocol' in credential and 'ssh' == credential['protocol']:
                 decoded_key = base64.b64decode(credential['keys']['private_key'])
                 decoded_key_str = str(decoded_key, "utf-8")
+
                 body = {
                     "name": name,
                     "organization": organization_id,
@@ -529,9 +529,8 @@ class AWXService:
                 }
             credentials = self.get_resources('credentials/?name='+name+'&organization='+str(organization_id))
             if credentials and credentials[0]:
-                credential_ids = self.put(body,'credentials/'+str(credentials[0]['id']))
-            else:
-                credential_ids = self.post(body, path)
+                r = self._session.delete(self.api_url +'/credentials/' +str(credentials[0]['id']), headers=self.headers, verify=False)
+            credential_ids = self.post(body, path)
             return credential_ids
         return None
 

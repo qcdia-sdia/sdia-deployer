@@ -89,7 +89,14 @@ class AWXService:
         inventory_ids = self.get_resources('inventories/?name='+inventory_name+'&organization='+str(organization_id))
         if inventory_ids and inventory_ids[0]:
             r = self._session.delete(self.api_url +'/inventories/' +str(inventory_ids[0]['id']), headers=self.headers, verify=False)
-        inventory_id = self.post(body, 'inventories')[0]
+
+
+
+        inventory_id = self.post(body, 'inventories')
+        if not inventory_id:
+            logger.info('inventory name: '+inventory_name)
+        else:
+            inventory_id = inventory_id[0]
         for group_name in inventory_manager.groups:
             group = inventory_manager.groups[group_name]
             if group_name == 'all' or group_name == 'ungrouped':
@@ -473,6 +480,8 @@ class AWXService:
 
     def get_job_artifacts(self, attributes_job_id):
         job_output = self.get_resources('jobs/'+str(attributes_job_id)+'/')
+        if not 'artifacts' in job_output:
+            raise Exception('Job ID: '+attributes_job_id+ ' has no artifacts')
         return job_output['artifacts']
 
     def get_attributes_job_ids(self, wf_job_id):

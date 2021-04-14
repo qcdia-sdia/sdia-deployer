@@ -99,6 +99,7 @@ def execute_workflows(workflows=None, topology_template_workflow_steps=None, awx
 
 
 def awx(tosca_template_path=None, tosca_template_dict=None):
+    awx = None
     try:
         tosca_service_is_up = ToscaHelper.service_is_up(sure_tosca_base_url)
         logger.info('Deploying using awx.')
@@ -139,10 +140,14 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                                                              topology_template_workflow_steps=topology_template_workflow_steps,
                                                              awx=awx,
                                                             tosca_template_dict=tosca_template_dict)
+
     except (Exception) as ex:
         track = traceback.format_exc()
         print(track)
         raise
+    finally:
+        if awx:
+            awx.clean_up_execution()
 
     response = {'toscaTemplate': tosca_template_dict}
     logger.info("Returning Deployment")

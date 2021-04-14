@@ -112,7 +112,7 @@ class AWXService:
         description = ''
         body = {
             'name': workflow_name,
-            'description': description,
+            'description': 'delete_after_execution',
             'organization': organization_id,
             'survey_enabled': False,
             'allow_simultaneous': True,
@@ -590,10 +590,12 @@ class AWXService:
         pass
 
     def clean_up_execution(self):
+        workflows_to_delete = self.get_resources('workflow_job_templates/?description=delete_after_execution')
+        for workflow in workflows_to_delete:
+            r = self._session.delete(self.api_url + '/workflow_job_templates/' + str(workflow['id']), verify=False,headers=self.headers)
         inventories_to_delete = self.get_resources('inventories/?description=delete_after_execution')
         for inventory in inventories_to_delete:
             r = self._session.delete(self.api_url + '/inventories/' + str(inventory['id']), verify=False,headers=self.headers)
-
         job_to_delete = self.get_resources('job_templates/?job_tags=delete_after_execution')
         for job in job_to_delete:
             r = self._session.delete(self.api_url + '/job_templates/' + str(job['id']), verify=False,headers=self.headers)

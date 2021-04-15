@@ -146,7 +146,7 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
         print(track)
         raise
     finally:
-        if awx:
+        if awx and delete_templates_after_execution:
             awx.clean_up_execution()
 
     response = {'toscaTemplate': tosca_template_dict}
@@ -220,7 +220,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     global channel, queue_name, connection, rabbitmq_host, sure_tosca_base_url,\
-        awx_base_url, awx_username, awx_password, secret
+        awx_base_url, awx_username, awx_password, secret, delete_templates_after_execution
 
     config = configparser.ConfigParser()
     config.read('properties.ini')
@@ -235,6 +235,8 @@ if __name__ == "__main__":
     queue_name = config['message_broker']['queue_name']
 
     secret = config['credential']['secret']
+
+    delete_templates_after_execution = config['sdia-deployer']['delete_templates_after_execution']
 
     logger.info('Properties sure_tosca_base_url: ' + sure_tosca_base_url + ', rabbitmq_host: ' + rabbitmq_host+ ', queue_name: '+queue_name)
 

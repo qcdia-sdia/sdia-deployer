@@ -21,6 +21,6 @@ CMD sed -i "s#http://127.0.0.1:8081/tosca-sure/1.0.0#$SURE_TOSCA_BASE_PATH#g" pr
     sed -i "s#password = password#password = $AWX_PASSWORD#g" properties.ini && \
     sed -i "s#host = 127.0.0.1#host = $RABBITMQ_HOST#g" properties.ini && \
     sed -i "s#secret =.*#secret = $CREDENTIAL_SECRET#g" properties.ini && \
-    sed -i "s#delete_templates_after_execution = False#delete_templates_after_execution = #DELETE_TEMPLATES_AFTER_EXECUTION#g" properties.ini && \
+    sed -i "s#delete_templates_after_execution = False#delete_templates_after_execution = $DELETE_TEMPLATES_AFTER_EXECUTION#g" properties.ini && \
     cat properties.ini && \
     python3 __main__.py $RABBITMQ_HOST deployer

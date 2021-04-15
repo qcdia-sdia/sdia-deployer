@@ -217,7 +217,7 @@ class AWXService:
 
         body = {
             'name': operation_name,
-            'description': '',
+            'description': 'delete_after_execution',
             'job_type': 'run',
             'inventory': operation[operation_name]['inventory'],
             'project': operation[operation_name]['project'],
@@ -227,7 +227,7 @@ class AWXService:
             'limit': '',
             'verbosity': 0,
             'extra_vars': json.dumps(extra_vars),
-            'job_tags': 'delete_after_execution',
+            'job_tags': '',
             'force_handlers': False,
             'skip_tags': '',
             'start_at_task': '',
@@ -330,7 +330,7 @@ class AWXService:
             'inventory': None,
             'scm_branch': '',
             'job_type': None,
-            'job_tags': 'delete_after_execution',
+            'job_tags': '',
             'skip_tags': '',
             'limit': '',
             'diff_mode': None,
@@ -400,7 +400,7 @@ class AWXService:
                 'inventory': None,
                 'scm_branch': None,
                 'job_type': None,
-                'job_tags': 'delete_after_execution',
+                'job_tags': '',
                 'skip_tags': None,
                 'limit': None,
                 'diff_mode': None,
@@ -454,7 +454,7 @@ class AWXService:
             'inventory': None,
             'scm_branch': '',
             'job_type': None,
-            'job_tags': 'delete_after_execution',
+            'job_tags': '',
             'skip_tags': '',
             'limit': '',
             'diff_mode': None,
@@ -596,7 +596,7 @@ class AWXService:
         inventories_to_delete = self.get_resources('inventories/?description=delete_after_execution')
         for inventory in inventories_to_delete:
             r = self._session.delete(self.api_url + '/inventories/' + str(inventory['id']), verify=False,headers=self.headers)
-        job_to_delete = self.get_resources('job_templates/?job_tags=delete_after_execution')
+        job_to_delete = self.get_resources('job_templates/?description=delete_after_execution')
         for job in job_to_delete:
             r = self._session.delete(self.api_url + '/job_templates/' + str(job['id']), verify=False,headers=self.headers)
         credentials_to_delete = self.get_resources('credentials/?description=delete_after_execution')

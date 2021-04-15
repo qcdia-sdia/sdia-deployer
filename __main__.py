@@ -236,7 +236,7 @@ if __name__ == "__main__":
 
     secret = config['credential']['secret']
 
-    delete_templates_after_execution = config['sdia-deployer']['delete_templates_after_execution']
+    delete_templates_after_execution = config['sdia-deployer']['delete_templates_after_execution'].lower() in ("yes", "true", "t", "1")
 
     logger.info('Properties sure_tosca_base_url: ' + sure_tosca_base_url + ', rabbitmq_host: ' + rabbitmq_host+ ', queue_name: '+queue_name)
 

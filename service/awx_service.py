@@ -212,7 +212,7 @@ class AWXService:
         else:
             raise Exception(r.text)
 
-    def create_job_template(self, operation=None,credential=None,organization_id=None,extra_vars=None):
+    def create_job_template(self, operation=None,credentials=None,organization_id=None,extra_vars=None):
         operation_name = list(operation.keys())[0]
 
         body = {
@@ -265,11 +265,12 @@ class AWXService:
                     job_templates_ids = self.put(body, 'job_templates/'+str(job_template['id']))
                 else:
                     job_templates_ids = self.post(body, 'job_templates')
-                if credential:
+                if credentials:
                     # rnd_str = ''.join(random.choice(string.ascii_lowercase) for i in range(5))
-                    credential_ids = self.add_credentials(credential=credential,
-                                                          path='job_templates/'+str(job_templates_ids[0])+'/credentials',
-                                                          organization_id=organization_id,name=operation_name)
+                    for credential in credentials:
+                        credential_ids = self.add_credentials(credential=credential,
+                                                              path='job_templates/'+str(job_templates_ids[0])+'/credentials',
+                                                              organization_id=organization_id,name=operation_name)
                 return job_templates_ids
             except Exception as ex:
                 if 'Playbook not found for project' in str(ex):
@@ -283,7 +284,7 @@ class AWXService:
                     raise ex
         return job_templates_ids
 
-    def create_workflow_steps(self, tosca_node,organization_id=None,credential=None):
+    def create_workflow_steps(self, tosca_node,organization_id=None,credentials=None):
         if 'interfaces' in tosca_node:
             workflow_steps = {}
             interfaces = tosca_node['interfaces']
@@ -306,13 +307,12 @@ class AWXService:
                             inventory = step['inputs']['inventory']
                             inventory_id = self.create_inventory(inventory_name=wf_name, inventory=inventory,organization_id=organization_id)
                             workflow_step[wf_name]['inventory'] = inventory_id
-                        if 'implementation' in step['inputs']:
+                        if 'implementation' in step:
                             if 'extra_variables' in step['inputs']:
                                 extra_variables = self.get_variables(extra_variables=step['inputs']['extra_variables'])
-                            workflow_step[wf_name]['implementation'] = step['inputs'][
-                                'implementation']
+                            workflow_step[wf_name]['implementation'] = step['implementation']
                             workflow_step[wf_name]['job_template'] = self.create_job_template(workflow_step,
-                                                                                              credential=credential,
+                                                                                              credentials=credentials,
                                                                                               organization_id=organization_id,
                                                                                               extra_vars=extra_variables)[0]
                         if workflow_step:
@@ -527,9 +527,15 @@ class AWXService:
             if 'cloud_provider_name' in credential:
                 if credential['cloud_provider_name'] == 'Azure':
                     body = {
-                        "name": name,
-                        "organization": organization_id,
-                        "credential_type": 11,
+                        'name': name,
+                        'description': 'delete_after_execution',
+                        'organization': organization_id,
+                        'kind': 'azure_rm',
+                        'tenant': credential['extra_properties']['tenant'],
+                        'client': credential['user'],
+                        'secret': credential['token'],
+                        'subscription': credential['extra_properties']['subscription_id'],
+                        'credential_type': 10,
                         "inputs": {
                             "client": credential['user'],
                             "secret": credential['token'],

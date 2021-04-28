@@ -220,13 +220,13 @@ class ToscaHelper:
             activities = wf_step['activities']
             index = 0
             for activity in activities:
-                if job['status'] == 'running' and 'set_state' in activity and index <= 0:
+                index += 1
+                if job['status'] == 'running' and 'set_state' in activity and index <= 1:
                     state = activity['set_state']
                     break
-                if job['status'] == 'successful' and 'set_state' in activity and index >= 0:
+                if job['status'] == 'successful' and 'set_state' in activity and index > 1:
                     state = activity['set_state']
                     break
-                index +=1
         if target_name and state:
             target = tosca_template_dict['topology_template']['node_templates'][target_name]
             if 'attributes' in target:

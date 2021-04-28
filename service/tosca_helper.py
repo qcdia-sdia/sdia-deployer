@@ -202,33 +202,31 @@ class ToscaHelper:
         wf_steps = self.get_workflows()[workflow_name]['steps']
         target_name = None
         state = None
-        if job['status'] == 'running':
-            call_operation_name = job['name']
-            for wf_step_name in wf_steps:
-                wf_step = wf_steps[wf_step_name]
-                activities = wf_step['activities']
-                index = 0
-                for activity in activities:
-                    index+=1
-                    if 'call_operation' in activity and call_operation_name == activity['call_operation']:
-                        target = wf_step['target']
-                    if 'set_state' in activity and index <= 0:
-                        state = activity['set_state']
+        call_operation_name = job['name']
+        target_wf_step_name = None
+        # Match job name with call_operation
+        for wf_step_name in wf_steps:
+            wf_step = wf_steps[wf_step_name]
+            activities = wf_step['activities']
+            for activity in activities:
+                if 'call_operation' in activity and call_operation_name == activity['call_operation']:
+                    target_name = wf_step['target']
+                    target_wf_step_name = wf_step_name
+                    break
 
-                if job['status'] == 'successful':
-                    call_operation_name = job['name']
-                    for wf_step_name in wf_steps:
-                        wf_step = wf_steps[wf_step_name]
-                        activities = wf_step['activities']
-                        index = 0
-                        for activity in activities:
-                            index += 1
-                            if 'call_operation' in activity and call_operation_name == activity['call_operation']:
-                                target_name = wf_step['target']
-                            if 'set_state' in activity and index >= 1:
-                                state = activity['set_state']
-
-                #     state = wf[wf_step_name]['activities']['set_state']
+        if target_name and target_wf_step_name:
+            #Should we upadate the state?
+            wf_step = wf_steps[target_wf_step_name]
+            activities = wf_step['activities']
+            index = 0
+            for activity in activities:
+                if job['status'] == 'running' and 'set_state' in activity and index <= 0:
+                    state = activity['set_state']
+                    break
+                if job['status'] == 'successful' and 'set_state' in activity and index >= 0:
+                    state = activity['set_state']
+                    break
+                index +=1
         if target_name and state:
             target = tosca_template_dict['topology_template']['node_templates'][target_name]
             if 'attributes' in target:

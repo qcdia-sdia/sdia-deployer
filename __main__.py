@@ -89,17 +89,24 @@ def execute_workflows(workflow=None, workflow_name=None,topology_template_workfl
             for workflow_node in workflow_nodes:
                 if 'job' in workflow_node['summary_fields']:
                     job =workflow_node['summary_fields']['job']
-                    tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict,job=job,workflow_name=workflow_name)
+                    tosca_template_dict = tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict,job=job,workflow_name=workflow_name)
             sleep(5)
         job_status = awx.get_workflow_status(launched_id)
         if 'failed' == job_status:
             raise Exception('Workflow execution failed')
+
+        workflow_nodes = awx.get_workflow_nodes(launched_id)
+        for workflow_node in workflow_nodes:
+            if 'job' in workflow_node['summary_fields']:
+                job =workflow_node['summary_fields']['job']
+                tosca_template_dict = tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict,job=job,workflow_name=workflow_name)
         attributes_job_ids = awx.get_attributes_job_ids(launched_id)
         if not attributes_job_ids:
             raise Exception('Could not find attribute job id from workflow: ' + str(launched_id))
         for job_id in attributes_job_ids:
             attributes.update(awx.get_job_artifacts(job_id))
     tosca_template_dict = awx.set_tosca_node_attributes(tosca_template_dict, attributes)
+
     return tosca_template_dict
 
 

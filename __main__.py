@@ -219,7 +219,7 @@ def encrypt_credentials(tosca_template_dict):
 def encrypt(contents, key):
     try:
         fernet = Fernet(key)
-        dec = fernet.encrypt(contents)
+        dec = fernet.encrypt(contents.encode())
         return dec.decode()
     except Exception as ex:
         done = True

@@ -64,37 +64,42 @@ def save_tosca_template(tosca_template_dict):
         yaml.dump(tosca_template_dict, outfile, default_flow_style=False)
     return  tosca_template_path
 
-def execute_workflows(workflows=None, topology_template_workflow_steps=None, awx=None,tosca_template_dict=None):
+def execute_workflows(workflow=None, workflow_name=None,topology_template_workflow_steps=None, awx=None,tosca_template_dict=None):
     launched_ids = []
     attributes = {}
-    for workflow_name in workflows:
-        workflow = workflows[workflow_name]
-        description = None
-        if 'description' in workflow:
-            description = workflow['description']
-        wf_ids = awx.create_workflow(description=description, workflow_name=workflow_name)
-        logger.info('Created workflow with ID: ' + str(wf_ids[0]))
-        workflow_node_ids = awx.create_dag(workflow_id=wf_ids[0],
-                                           tosca_workflow=workflow,
-                                           topology_template_workflow_steps=topology_template_workflow_steps)
-        logger.info('Added nodes to workflow')
-        for wf_id in wf_ids:
-            wf_job_ids = awx.launch(wf_id)
-            logger.info('Launch workflows: ' + str(wf_job_ids))
-            launched_ids += wf_job_ids
-        for launched_id in launched_ids:
-            while awx.get_job_status(launched_id) == 'running':
-                logger.info('Workflow: ' + str(launched_id) + ' status: ' + awx.get_job_status(launched_id))
-                sleep(5)
-            job_status = awx.get_job_status(launched_id)
-            if 'failed' == job_status:
-                raise Exception('Workflow execution failed')
-            attributes_job_ids = awx.get_attributes_job_ids(launched_id)
-            if not attributes_job_ids:
-                raise Exception('Could not find attribute job id from workflow: ' + str(launched_id))
-            for job_id in attributes_job_ids:
-                attributes.update(awx.get_job_artifacts(job_id))
-        tosca_template_dict = awx.set_tosca_node_attributes(tosca_template_dict, attributes)
+    description = None
+    if 'description' in workflow:
+        description = workflow['description']
+    wf_ids = awx.create_workflow(description=description, workflow_name=workflow_name)
+    logger.info('Created workflow with ID: ' + str(wf_ids[0]))
+    workflow_node_ids = awx.create_dag(workflow_id=wf_ids[0],
+                                       tosca_workflow=workflow,
+                                       topology_template_workflow_steps=topology_template_workflow_steps)
+    logger.info('Added nodes to workflow')
+    for wf_id in wf_ids:
+        wf_job_ids = awx.launch(wf_id)
+        logger.info('Launch workflows: ' + str(wf_job_ids))
+        launched_ids += wf_job_ids
+
+
+    for launched_id in launched_ids:
+        while awx.get_workflow_status(launched_id) == 'running':
+            logger.info('Workflow: ' + str(launched_id) + ' status: ' + awx.get_workflow_status(launched_id))
+            workflow_nodes = awx.get_workflow_nodes(launched_id)
+            for workflow_node in workflow_nodes:
+                if 'job' in workflow_node['summary_fields']:
+                    job =workflow_node['summary_fields']['job']
+                    tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict,job=job,workflow_name=workflow_name)
+            sleep(5)
+        job_status = awx.get_workflow_status(launched_id)
+        if 'failed' == job_status:
+            raise Exception('Workflow execution failed')
+        attributes_job_ids = awx.get_attributes_job_ids(launched_id)
+        if not attributes_job_ids:
+            raise Exception('Could not find attribute job id from workflow: ' + str(launched_id))
+        for job_id in attributes_job_ids:
+            attributes.update(awx.get_job_artifacts(job_id))
+    tosca_template_dict = awx.set_tosca_node_attributes(tosca_template_dict, attributes)
     return tosca_template_dict
 
 
@@ -114,6 +119,7 @@ def extract_credentials_from_node(tosca_node):
 
 def awx(tosca_template_path=None, tosca_template_dict=None):
     awx = None
+    global tosca_helper
     try:
         tosca_service_is_up = ToscaHelper.service_is_up(sure_tosca_base_url)
         logger.info('Deploying using awx.')
@@ -132,9 +138,6 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                 tosca_node = tosca_helper.resolve_function_values(tosca_node)
 
                 credentials = extract_credentials_from_node(tosca_node)
-
-
-
                 logger.info('Creating workflow steps for: ' + tosca_node_name)
                 node_workflow_steps = awx.create_workflow_steps(tosca_node, organization_id=organization_id,
                                                                 credentials=credentials)
@@ -142,10 +145,14 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
 
             workflows = tosca_helper.get_workflows()
             if workflows:
-                tosca_template_dict = execute_workflows(workflows=workflows,
-                                                             topology_template_workflow_steps=topology_template_workflow_steps,
-                                                             awx=awx,
-                                                            tosca_template_dict=tosca_template_dict)
+                for workflow_name in workflows:
+                    workflow = workflows[workflow_name]
+                    can_run = tosca_helper.check_workflow_preconditions(workflow,tosca_template_dict)
+                    if can_run:
+                        tosca_template_dict = execute_workflows(workflow=workflow,workflow_name=workflow_name,
+                                                                     topology_template_workflow_steps=topology_template_workflow_steps,
+                                                                     awx=awx,
+                                                                    tosca_template_dict=tosca_template_dict)
 
     except (Exception) as ex:
         track = traceback.format_exc()

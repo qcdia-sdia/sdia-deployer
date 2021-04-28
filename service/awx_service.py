@@ -418,10 +418,14 @@ class AWXService:
             path += 'success_nodes'
         if label == 'on_failure':
             path += 'failure_nodes'
+        if not child in steps:
+            raise Exception(child+ ' is set as step in the workflow but could not be found in the workflow steps: '+str(steps))
         activities = steps[child]['activities']
         for activity in activities:
             if 'call_operation' in activity:
                 call_operation = activity['call_operation']
+                if 'job_template' not in topology_template_workflow_steps[call_operation]:
+                    raise Exception(str(topology_template_workflow_steps[call_operation])+' with call_operation: '+call_operation+' has no job_template definition. Check the interface implementation')
                 child_id = self.add_child_node(identifier=child,
                                                unified_job_template=topology_template_workflow_steps[call_operation]['job_template'],
                                                path=path)
@@ -485,17 +489,22 @@ class AWXService:
         return job_output['artifacts']
 
     def get_attributes_job_ids(self, wf_job_id):
+        workflow_nodes = self.get_workflow_nodes(wf_job_id)
         attribute_job_ids = []
-        workflow_nodes = self.get_resources('workflow_jobs/'+str(wf_job_id)+'/workflow_nodes/')
         for wf_node in workflow_nodes:
             if not wf_node['success_nodes'] and not wf_node['failure_nodes'] and not wf_node['always_nodes'] and 'job' \
                     in wf_node and 'attributes' in wf_node['identifier']:
                 attribute_job_ids.append(wf_node['job'])
         return attribute_job_ids
 
-    def get_job_status(self, launched_id):
+    def get_workflow_status(self, launched_id):
         workflow = self.get_resources('workflow_jobs/' + str(launched_id) + '/')
         return workflow['status']
+
+    def get_job_status(self, job_id):
+        job_template = self.get_resources('job_templates/' + str(job_id) + '/')
+        return job_template['status']
+
 
     def set_tosca_node_attributes(self, tosca_template_dict, attributes):
         node_templates = tosca_template_dict['topology_template']['node_templates']
@@ -509,7 +518,7 @@ class AWXService:
         return tosca_template_dict
 
     def add_credentials(self, credential=None,organization_id=None,path=None,name=None):
-        if credential:
+        if credential and 'get_attribute' not in credential:
             body = {}
             if 'protocol' in credential and 'ssh' == credential['protocol']:
                 decoded_key = base64.b64decode(credential['keys']['private_key'])
@@ -608,4 +617,8 @@ class AWXService:
         credentials_to_delete = self.get_resources('credentials/?description=delete_after_execution')
         for credential in credentials_to_delete:
             r = self._session.delete(self.api_url + '/credentials/' + str(credential['id']), verify=False,headers=self.headers)
+
+    def get_workflow_nodes(self, wf_job_id):
+        workflow_nodes = self.get_resources('workflow_jobs/'+str(wf_job_id)+'/workflow_nodes/')
+        return workflow_nodes
 

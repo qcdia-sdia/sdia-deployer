@@ -11,6 +11,7 @@ import sys
 import tempfile
 import time
 import traceback
+from collections import deque
 from threading import Thread
 from time import sleep
 
@@ -168,14 +169,14 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
     finally:
         if awx and delete_templates_after_execution:
             awx.clean_up_execution()
-
+    tosca_template_dict = encrypt_credentials(tosca_template_dict)
     response = {'toscaTemplate': tosca_template_dict}
     logger.info("Returning Deployment")
     logger.info("Output message:" + json.dumps(response))
     return json.dumps(response)
 
-def decode_credentials(tosca_template_dict):
-    logger.info('Decoding credentials.')
+def decrypt_credentials(tosca_template_dict):
+    logger.info('Decrypting credentials.')
     node_templates = tosca_template_dict['topology_template']['node_templates']
     enc_key = bytes(secret, 'utf-8')
     for node_template_name in node_templates:
@@ -185,16 +186,49 @@ def decode_credentials(tosca_template_dict):
             for credential in credentials:
                 if 'token' in credential:
                     token = credential['token']
-                    credential['token'] = decode(token,enc_key)
+                    credential['token'] = decrypt(token,enc_key)
                 if 'keys' in credential:
                     keys = credential['keys']
                     for key_name in keys:
                         token = keys[key_name]
-                        keys[key_name] = decode(token, enc_key)
+                        keys[key_name] = decrypt(token, enc_key)
     return tosca_template_dict
 
 
-def decode(contents,key):
+def encrypt_credentials(tosca_template_dict):
+    logger.info('Encrypting credentials.')
+    node_templates = tosca_template_dict['topology_template']['node_templates']
+    enc_key = bytes(secret, 'utf-8')
+    for node_template_name in node_templates:
+        node_template = node_templates[node_template_name]
+        credentials = extract_credentials_from_node(node_template)
+        if credentials:
+            for credential in credentials:
+                if 'token' in credential:
+                    token = credential['token']
+                    credential['token'] = encrypt(token,enc_key)
+                if 'keys' in credential:
+                    keys = credential['keys']
+                    for key_name in keys:
+                        token = keys[key_name]
+                        keys[key_name] = encrypt(token, enc_key)
+    return tosca_template_dict
+
+
+def encrypt(contents, key):
+    try:
+        fernet = Fernet(key)
+        dec = fernet.encrypt(contents)
+        return dec.decode()
+    except Exception as ex:
+        done = True
+        e = sys.exc_info()[0]
+        logger.info("Error: " + str(e))
+        print(e)
+        exit(-1)
+
+
+def decrypt(contents, key):
     try:
         fernet = Fernet(key)
         dec = fernet.decrypt(contents.encode()).decode()
@@ -220,7 +254,7 @@ def handle_delivery(message):
     owner = parsed_json_message['owner']
     tosca_file_name = 'tosca_template'
     tosca_template_dict = parsed_json_message['toscaTemplate']
-    tosca_template_dict = decode_credentials(tosca_template_dict)
+    tosca_template_dict =  decrypt_credentials(tosca_template_dict)
 
     tosca_template_path = save_tosca_template(tosca_template_dict)
     # if 'workflows' in tosca_template_dict['topology_template']:

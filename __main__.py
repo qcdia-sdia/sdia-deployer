@@ -115,7 +115,8 @@ def extract_credentials_from_node(tosca_node):
     credentials = []
     for name in ['attributes', 'properties']:
         if name in tosca_node:
-            for cred_name in ['credential', 'credentials', 'user_key_pair']:
+            # for cred_name in ['credential', 'credentials', 'user_key_pair']:
+            for cred_name in ['credential', 'credentials']:
                 if cred_name in tosca_node[name]:
                     credential = tosca_node[name][cred_name]
                     if isinstance(credential, list):

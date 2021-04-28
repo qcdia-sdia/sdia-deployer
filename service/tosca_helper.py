@@ -9,6 +9,7 @@ import yaml
 from sure_tosca_client import Configuration, ApiClient
 from sure_tosca_client.api import default_api
 from toscaparser.tosca_template import ToscaTemplate
+import unittest
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +198,80 @@ class ToscaHelper:
                 self.find_functions(v,functions=functions)
         return functions
 
+    def set_node_state(self,tosca_template_dict=None,job=None,workflow_name=None):
+        wf_steps = self.get_workflows()[workflow_name]['steps']
+        target_name = None
+        state = None
+        call_operation_name = job['name']
+        target_wf_step_name = None
+        # Match job name with call_operation
+        for wf_step_name in wf_steps:
+            wf_step = wf_steps[wf_step_name]
+            activities = wf_step['activities']
+            for activity in activities:
+                if 'call_operation' in activity and call_operation_name == activity['call_operation']:
+                    target_name = wf_step['target']
+                    target_wf_step_name = wf_step_name
+                    break
 
+        if target_name and target_wf_step_name:
+            #Should we upadate the state?
+            wf_step = wf_steps[target_wf_step_name]
+            activities = wf_step['activities']
+            index = 0
+            for activity in activities:
+                index += 1
+                if job['status'] == 'running' and 'set_state' in activity and index <= 1:
+                    state = activity['set_state']
+                    break
+                if job['status'] == 'successful' and 'set_state' in activity and index > 1:
+                    state = activity['set_state']
+                    break
+        if target_name and state:
+            target = tosca_template_dict['topology_template']['node_templates'][target_name]
+            if 'attributes' in target:
+                attributes = target['attributes']
+            else:
+                attributes = {}
+            attributes['current_state'] = state
+            target['attributes'] = attributes
+        return tosca_template_dict
+
+
+
+    def check_workflow_preconditions(self,workflow=None, tosca_template_dict=None):
+        if 'preconditions' in workflow:
+            preconditions = workflow['preconditions']
+            predicate_conditions_check = False
+            preconditions_check = False
+            for precondition in preconditions:
+                target_name = precondition['target']
+                conditions = precondition['condition']
+                conditions_count=0
+                for condition in conditions:
+                    predicate = 'assert'
+                    if 'assert' in condition:
+                        predicate = 'assert'
+                    predicate_conditions = condition[predicate]
+                    target = tosca_template_dict['topology_template']['node_templates'][target_name]
+                    num_of_conditions = len(predicate_conditions)
+                    for predicate_condition in predicate_conditions:
+                        attribute_name = list(predicate_condition.keys())[0]
+                        operator = list(predicate_condition[attribute_name][0].keys())[0]
+                        attribute_value = predicate_condition[attribute_name][0][operator]
+                        # I'm sure there is a better way
+                        if 'attributes' in target and attribute_name in target['attributes']:
+                            if operator == 'equal':
+                                if target['attributes'][attribute_name] == attribute_value:
+                                    conditions_count += 1
+                                else:
+                                    return False
+                        else:
+                            return False
+                    if conditions_count == num_of_conditions:
+                        predicate_conditions_check = True
+            return predicate_conditions_check
+        return False
 
 
 def get_interface_types(node):

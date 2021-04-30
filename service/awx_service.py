@@ -6,6 +6,7 @@ import random
 import string
 import tempfile
 import time
+import traceback
 import uuid
 from base64 import b64encode
 
@@ -89,9 +90,6 @@ class AWXService:
         inventory_ids = self.get_resources('inventories/?name='+inventory_name+'&organization='+str(organization_id))
         if inventory_ids and inventory_ids[0]:
             r = self._session.delete(self.api_url +'/inventories/' +str(inventory_ids[0]['id']), headers=self.headers, verify=False)
-
-
-
         inventory_id = self.post(body, 'inventories')
         if not inventory_id:
             logger.info('inventory name: '+inventory_name)
@@ -185,7 +183,13 @@ class AWXService:
             # if hosts and hosts[0] and hosts[0]['inventory']==inventory_id:
             #     r = self._session.delete(self.api_url + '/hosts/' + str(hosts[0]['id']),
             #                              headers=self.headers, verify=False)
-            inventory_hosts_ids = self.post(body, 'hosts')
+            try:
+                inventory_hosts_ids = self.post(body, 'hosts')
+            except (Exception) as ex:
+                track = traceback.format_exc()
+                print(track)
+                raise ex
+
             return inventory_hosts_ids
         if inventory_group_id:
             body = {
@@ -214,7 +218,6 @@ class AWXService:
 
     def create_job_template(self, operation=None,credentials=None,organization_id=None,extra_vars=None):
         operation_name = list(operation.keys())[0]
-
         body = {
             'name': operation_name,
             'description': 'delete_after_execution',
@@ -262,7 +265,12 @@ class AWXService:
                 self.get_resources('job_templates/?name=' + operation_name + '&organization=' + str(organization_id))
                 if job_templates:
                     job_template = job_templates[0]
-                    job_templates_ids = self.put(body, 'job_templates/'+str(job_template['id']))
+                    try:
+                        job_templates_ids = self.put(body, 'job_templates/'+str(job_template['id']))
+                    except (Exception) as ex:
+                        track = traceback.format_exc()
+                        print(track)
+                        raise ex
                 else:
                     job_templates_ids = self.post(body, 'job_templates')
                 if credentials:
@@ -307,10 +315,13 @@ class AWXService:
                             inventory = step['inputs']['inventory']
                             inventory_id = self.create_inventory(inventory_name=wf_name, inventory=inventory,organization_id=organization_id)
                             workflow_step[wf_name]['inventory'] = inventory_id
+                            logger.info('Created inventory: '+str(inventory_id)+' for :'+wf_name)
                         if 'implementation' in step:
                             if 'extra_variables' in step['inputs']:
                                 extra_variables = self.get_variables(extra_variables=step['inputs']['extra_variables'])
                             workflow_step[wf_name]['implementation'] = step['implementation']
+                            if not workflow_step[wf_name]['inventory']:
+                                raise Exception(wf_name + ' is missing inventory')
                             workflow_step[wf_name]['job_template'] = self.create_job_template(workflow_step,
                                                                                               credentials=credentials,
                                                                                               organization_id=organization_id,

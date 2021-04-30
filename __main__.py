@@ -91,7 +91,7 @@ def execute_workflows(workflow=None, workflow_name=None,topology_template_workfl
                 if 'job' in workflow_node['summary_fields']:
                     job =workflow_node['summary_fields']['job']
                     tosca_template_dict = tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict,job=job,workflow_name=workflow_name)
-            sleep(5)
+            sleep(8)
         job_status = awx.get_workflow_status(launched_id)
         if 'failed' == job_status:
             raise Exception('Workflow execution failed')

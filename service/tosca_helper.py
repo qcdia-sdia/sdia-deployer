@@ -153,7 +153,7 @@ class ToscaHelper:
         target_node = self.tosca_template_dict['topology_template']['node_templates'][function['target']]
         name = self.function_names[function['name']]
         value_name = function['value_name']
-        if name in target_node:
+        if name in target_node and value_name in target_node[name]:
             return target_node[name][value_name]
 
     @classmethod

@@ -484,7 +484,7 @@ class AWXService:
 
     def get_job_artifacts(self, attributes_job_id):
         job_output = self.get_resources('jobs/'+str(attributes_job_id)+'/')
-        if not 'artifacts' in job_output:
+        if not job_output and 'artifacts' in job_output:
             raise Exception('Job ID: '+attributes_job_id+ ' has no artifacts')
         return job_output['artifacts']
 
@@ -514,7 +514,10 @@ class AWXService:
             else:
                 node_attributes ={}
             node_attributes.update(attributes[node_name])
-            node_templates[node_name]['attributes'] = node_attributes
+            if 'attributes' in node_attributes:
+                node_templates[node_name]['attributes'] = node_attributes['attributes']
+            else:
+                node_templates[node_name]['attributes'] = node_attributes
         return tosca_template_dict
 
     def add_credentials(self, credential=None,organization_id=None,path=None,name=None):

@@ -90,11 +90,14 @@ class AWXService:
         inventory_ids = self.get_resources('inventories/?name='+inventory_name+'&organization='+str(organization_id))
         if inventory_ids and inventory_ids[0]:
             r = self._session.delete(self.api_url +'/inventories/' +str(inventory_ids[0]['id']), headers=self.headers, verify=False)
-        inventory_id = self.post(body, 'inventories')
-        if not inventory_id:
-            logger.info('inventory name: '+inventory_name)
-        else:
-            inventory_id = inventory_id[0]
+        inventory_id = []
+        index = 0
+        while not inventory_id and index <= 10 :
+            inventory_id = self.post(body, 'inventories')
+            index+=1
+
+        logger.info('inventory name: ' + inventory_name+' inventory_id: '+str(inventory_id))
+        inventory_id = inventory_id[0]
         for group_name in inventory_manager.groups:
             group = inventory_manager.groups[group_name]
             if group_name == 'all' or group_name == 'ungrouped':

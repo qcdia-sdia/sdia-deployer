@@ -396,7 +396,8 @@ class AWXService:
                                                                                     child=child,
                                                                                     label=outcome,
                                                                                     steps=steps,
-                                                                                    topology_template_workflow_steps=topology_template_workflow_steps)
+                                                                                    topology_template_workflow_steps=topology_template_workflow_steps,
+                                                                                    workflow_id=workflow_id)
         return None
 
     def add_edge(self,graph=None,parent_name=None, children=None,label=None):
@@ -426,7 +427,7 @@ class AWXService:
         workflow_job_template_node_ids = self.post(body,'workflow_job_templates/'+str(workflow_id)+'/workflow_nodes')
         return workflow_job_template_node_ids
 
-    def create_workflow_nodes(self, parent_id, child, label, steps, topology_template_workflow_steps):
+    def create_workflow_nodes(self, parent_id, child, label, steps, topology_template_workflow_steps,workflow_id=None):
         path = 'workflow_job_template_nodes/' + str(parent_id) + '/'
         if label == 'on_success':
             path += 'success_nodes'
@@ -442,7 +443,7 @@ class AWXService:
                     raise Exception(str(topology_template_workflow_steps[call_operation])+' with call_operation: '+call_operation+' has no job_template definition. Check the interface implementation')
                 child_id = self.add_child_node(identifier=child,
                                                unified_job_template=topology_template_workflow_steps[call_operation]['job_template'],
-                                               path=path)
+                                               path=path,workflow_id=workflow_id)
                 for outcome in ['on_failure','on_success']:
                     if outcome in activity:
                         node_children = activity[outcome]
@@ -459,12 +460,14 @@ class AWXService:
                                                        topology_template_workflow_steps=topology_template_workflow_steps)
         return None
 
-    def add_child_node(self, identifier, unified_job_template, path):
+    def add_child_node(self, identifier, unified_job_template, path,workflow_id=None):
         res = self.get_resources('workflow_job_template_nodes/?identifier=' + identifier)
         child_id = None
         if res:
-            child_id = res[0]['id']
-            logger.info('-----------------Found child: '+identifier)
+            for child in res:
+                if child['summary_fields']['workflow_job_template']['id'] == workflow_id:
+                    child_id = child['id']
+                    break
 
         body = {
             'id': child_id,
@@ -482,7 +485,12 @@ class AWXService:
             'identifier': identifier
         }
 
-        res = self.post(body, path)
+        try:
+            res = self.post(body, path)
+        except (Exception) as ex:
+            raise ex
+
+
         if not child_id and res:
             child_id = res[0]
         return child_id

@@ -131,8 +131,6 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
     global tosca_helper
     try:
         tosca_service_is_up = ToscaHelper.service_is_up(sure_tosca_base_url)
-        logger.info('Deploying using awx.')
-
         if tosca_service_is_up:
             tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
             node_templates = tosca_template_dict['topology_template']['node_templates']

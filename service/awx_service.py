@@ -6,6 +6,7 @@ import random
 import string
 import tempfile
 import time
+import traceback
 import uuid
 from base64 import b64encode
 
@@ -89,14 +90,14 @@ class AWXService:
         inventory_ids = self.get_resources('inventories/?name='+inventory_name+'&organization='+str(organization_id))
         if inventory_ids and inventory_ids[0]:
             r = self._session.delete(self.api_url +'/inventories/' +str(inventory_ids[0]['id']), headers=self.headers, verify=False)
+        inventory_id = []
+        index = 0
+        while not inventory_id and index <= 10 :
+            inventory_id = self.post(body, 'inventories')
+            index+=1
 
-
-
-        inventory_id = self.post(body, 'inventories')
-        if not inventory_id:
-            logger.info('inventory name: '+inventory_name)
-        else:
-            inventory_id = inventory_id[0]
+        logger.info('inventory name: ' + inventory_name+' inventory_id: '+str(inventory_id))
+        inventory_id = inventory_id[0]
         for group_name in inventory_manager.groups:
             group = inventory_manager.groups[group_name]
             if group_name == 'all' or group_name == 'ungrouped':
@@ -185,7 +186,13 @@ class AWXService:
             # if hosts and hosts[0] and hosts[0]['inventory']==inventory_id:
             #     r = self._session.delete(self.api_url + '/hosts/' + str(hosts[0]['id']),
             #                              headers=self.headers, verify=False)
-            inventory_hosts_ids = self.post(body, 'hosts')
+            try:
+                inventory_hosts_ids = self.post(body, 'hosts')
+            except (Exception) as ex:
+                track = traceback.format_exc()
+                print(track)
+                raise ex
+
             return inventory_hosts_ids
         if inventory_group_id:
             body = {
@@ -214,7 +221,6 @@ class AWXService:
 
     def create_job_template(self, operation=None,credentials=None,organization_id=None,extra_vars=None):
         operation_name = list(operation.keys())[0]
-
         body = {
             'name': operation_name,
             'description': 'delete_after_execution',
@@ -262,7 +268,12 @@ class AWXService:
                 self.get_resources('job_templates/?name=' + operation_name + '&organization=' + str(organization_id))
                 if job_templates:
                     job_template = job_templates[0]
-                    job_templates_ids = self.put(body, 'job_templates/'+str(job_template['id']))
+                    try:
+                        job_templates_ids = self.put(body, 'job_templates/'+str(job_template['id']))
+                    except (Exception) as ex:
+                        track = traceback.format_exc()
+                        print(track)
+                        raise ex
                 else:
                     job_templates_ids = self.post(body, 'job_templates')
                 if credentials:
@@ -307,10 +318,13 @@ class AWXService:
                             inventory = step['inputs']['inventory']
                             inventory_id = self.create_inventory(inventory_name=wf_name, inventory=inventory,organization_id=organization_id)
                             workflow_step[wf_name]['inventory'] = inventory_id
+                            logger.info('Created inventory: '+str(inventory_id)+' for :'+wf_name)
                         if 'implementation' in step:
                             if 'extra_variables' in step['inputs']:
                                 extra_variables = self.get_variables(extra_variables=step['inputs']['extra_variables'])
                             workflow_step[wf_name]['implementation'] = step['implementation']
+                            if not workflow_step[wf_name]['inventory']:
+                                raise Exception(wf_name + ' is missing inventory')
                             workflow_step[wf_name]['job_template'] = self.create_job_template(workflow_step,
                                                                                               credentials=credentials,
                                                                                               organization_id=organization_id,
@@ -382,7 +396,8 @@ class AWXService:
                                                                                     child=child,
                                                                                     label=outcome,
                                                                                     steps=steps,
-                                                                                    topology_template_workflow_steps=topology_template_workflow_steps)
+                                                                                    topology_template_workflow_steps=topology_template_workflow_steps,
+                                                                                    workflow_id=workflow_id)
         return None
 
     def add_edge(self,graph=None,parent_name=None, children=None,label=None):
@@ -412,7 +427,9 @@ class AWXService:
         workflow_job_template_node_ids = self.post(body,'workflow_job_templates/'+str(workflow_id)+'/workflow_nodes')
         return workflow_job_template_node_ids
 
-    def create_workflow_nodes(self, parent_id, child, label, steps, topology_template_workflow_steps):
+    def create_workflow_nodes(self, parent_id, child, label, steps, topology_template_workflow_steps,workflow_id=None):
+        if not parent_id:
+            raise Exception('Cannot create workflow nodes: '+str(steps.keys())+' parent_id is None')
         path = 'workflow_job_template_nodes/' + str(parent_id) + '/'
         if label == 'on_success':
             path += 'success_nodes'
@@ -428,7 +445,9 @@ class AWXService:
                     raise Exception(str(topology_template_workflow_steps[call_operation])+' with call_operation: '+call_operation+' has no job_template definition. Check the interface implementation')
                 child_id = self.add_child_node(identifier=child,
                                                unified_job_template=topology_template_workflow_steps[call_operation]['job_template'],
-                                               path=path)
+                                               path=path,workflow_id=workflow_id)
+                # if not child_id:
+                #     raise Exception('Failed to create child node for: '+child)
                 for outcome in ['on_failure','on_success']:
                     if outcome in activity:
                         node_children = activity[outcome]
@@ -442,16 +461,18 @@ class AWXService:
                                                        child=child,
                                                        label=outcome,
                                                        steps=steps,
-                                                       topology_template_workflow_steps=topology_template_workflow_steps)
+                                                       topology_template_workflow_steps=topology_template_workflow_steps,
+                                                       workflow_id=workflow_id)
         return None
 
-    def add_child_node(self, identifier, unified_job_template, path):
+    def add_child_node(self, identifier, unified_job_template, path,workflow_id=None):
         res = self.get_resources('workflow_job_template_nodes/?identifier=' + identifier)
         child_id = None
         if res:
-            child_id = res[0]['id']
-            logger.info('-----------------Found child: '+identifier)
-
+            for child in res:
+                if child['summary_fields']['workflow_job_template']['id'] == workflow_id:
+                    child_id = child['id']
+                    break
         body = {
             'id': child_id,
             'extra_data': {},
@@ -468,7 +489,10 @@ class AWXService:
             'identifier': identifier
         }
 
-        res = self.post(body, path)
+        try:
+            res = self.post(body, path)
+        except (Exception) as ex:
+            raise ex
         if not child_id and res:
             child_id = res[0]
         return child_id

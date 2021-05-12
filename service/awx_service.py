@@ -428,6 +428,8 @@ class AWXService:
         return workflow_job_template_node_ids
 
     def create_workflow_nodes(self, parent_id, child, label, steps, topology_template_workflow_steps,workflow_id=None):
+        if not parent_id:
+            raise Exception('Cannot create workflow nodes: '+str(steps.keys())+' parent_id is None')
         path = 'workflow_job_template_nodes/' + str(parent_id) + '/'
         if label == 'on_success':
             path += 'success_nodes'
@@ -444,6 +446,8 @@ class AWXService:
                 child_id = self.add_child_node(identifier=child,
                                                unified_job_template=topology_template_workflow_steps[call_operation]['job_template'],
                                                path=path,workflow_id=workflow_id)
+                if not child_id:
+                    raise Exception('Failed to create child node for: '+child)
                 for outcome in ['on_failure','on_success']:
                     if outcome in activity:
                         node_children = activity[outcome]

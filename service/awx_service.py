@@ -446,8 +446,8 @@ class AWXService:
                 child_id = self.add_child_node(identifier=child,
                                                unified_job_template=topology_template_workflow_steps[call_operation]['job_template'],
                                                path=path,workflow_id=workflow_id)
-                if not child_id:
-                    raise Exception('Failed to create child node for: '+child)
+                # if not child_id:
+                #     raise Exception('Failed to create child node for: '+child)
                 for outcome in ['on_failure','on_success']:
                     if outcome in activity:
                         node_children = activity[outcome]
@@ -461,7 +461,8 @@ class AWXService:
                                                        child=child,
                                                        label=outcome,
                                                        steps=steps,
-                                                       topology_template_workflow_steps=topology_template_workflow_steps)
+                                                       topology_template_workflow_steps=topology_template_workflow_steps,
+                                                       workflow_id=workflow_id)
         return None
 
     def add_child_node(self, identifier, unified_job_template, path,workflow_id=None):
@@ -472,7 +473,6 @@ class AWXService:
                 if child['summary_fields']['workflow_job_template']['id'] == workflow_id:
                     child_id = child['id']
                     break
-
         body = {
             'id': child_id,
             'extra_data': {},
@@ -493,8 +493,6 @@ class AWXService:
             res = self.post(body, path)
         except (Exception) as ex:
             raise ex
-
-
         if not child_id and res:
             child_id = res[0]
         return child_id

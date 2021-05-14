@@ -308,6 +308,8 @@ class AWXService:
                         wf_name = interface_name + '.' + step_name
                         logger.info('Creating steps: ' + wf_name)
                         extra_variables = None
+                        if not 'inputs' in step or not 'repository' in step['inputs']:
+                            raise Exception('Workflow steps for: '+wf_name+' have no repository or inputs: '+str(step))
                         if 'inputs' in step and 'repository' in step['inputs']:
                             repository_url = step['inputs']['repository']
                             project_id = self.create_project(project_name=repository_url, scm_url=repository_url,

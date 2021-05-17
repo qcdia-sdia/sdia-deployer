@@ -210,6 +210,8 @@ class ToscaHelper:
             activities = wf_step['activities']
             for activity in activities:
                 if 'call_operation' in activity and call_operation_name == activity['call_operation']:
+                    if not 'target' in wf_step:
+                        raise Exception('workflow step: '+str(wf_step) +' has no target')
                     target_name = wf_step['target']
                     target_wf_step_name = wf_step_name
                     break

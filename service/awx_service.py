@@ -308,6 +308,8 @@ class AWXService:
                         wf_name = interface_name + '.' + step_name
                         logger.info('Creating steps: ' + wf_name)
                         extra_variables = None
+                        if not 'repository' in step['inputs']:
+                            raise Exception('Workflow steps for: '+wf_name+' have no repository: '+str(step))
                         if 'inputs' in step and 'repository' in step['inputs']:
                             repository_url = step['inputs']['repository']
                             project_id = self.create_project(project_name=repository_url, scm_url=repository_url,
@@ -508,7 +510,9 @@ class AWXService:
 
     def get_job_artifacts(self, attributes_job_id):
         job_output = self.get_resources('jobs/'+str(attributes_job_id)+'/')
-        if not job_output and 'artifacts' in job_output:
+        if not job_output:
+            raise Exception('Job ID: ' + attributes_job_id + ' not found')
+        if not 'artifacts' in job_output:
             raise Exception('Job ID: '+attributes_job_id+ ' has no artifacts')
         return job_output['artifacts']
 

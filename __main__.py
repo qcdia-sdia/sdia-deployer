@@ -137,6 +137,7 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
 
             awx = AWXService(api_url=awx_base_url, username=awx_username, password=awx_password,
                              tosca_helper=tosca_helper)
+            logger.info('Creating organization: sdia')
             organization_id = awx.create_organization('sdia')
             topology_template_workflow_steps = {}
             for tosca_node_name in node_templates:
@@ -160,7 +161,8 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                                                                      topology_template_workflow_steps=topology_template_workflow_steps,
                                                                      awx=awx,
                                                                     tosca_template_dict=tosca_template_dict)
-
+        else:
+            raise Exception('Could not connect to sure tosca at '+sure_tosca_base_url)
     except (Exception) as ex:
         track = traceback.format_exc()
         print(track)

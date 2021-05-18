@@ -132,9 +132,10 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
     try:
         tosca_service_is_up = ToscaHelper.service_is_up(sure_tosca_base_url)
         if tosca_service_is_up:
+            logger.info('Initializing ToscaHelper')
             tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
             node_templates = tosca_template_dict['topology_template']['node_templates']
-
+            logger.info('Initializing AWXService')
             awx = AWXService(api_url=awx_base_url, username=awx_username, password=awx_password,
                              tosca_helper=tosca_helper)
             logger.info('Creating organization: sdia')

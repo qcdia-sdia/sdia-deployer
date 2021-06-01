@@ -149,7 +149,7 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                 credentials = extract_credentials_from_node(tosca_node)
                 logger.info('Creating workflow steps for: ' + tosca_node_name)
                 node_workflow_steps = awx.create_workflow_steps(tosca_node, organization_id=organization_id,
-                                                                credentials=credentials)
+                                                                credentials=credentials,tosca_node_name=tosca_node_name)
                 topology_template_workflow_steps.update(node_workflow_steps)
 
             workflows = tosca_helper.get_workflows()

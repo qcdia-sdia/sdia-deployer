@@ -295,7 +295,7 @@ class AWXService:
                     raise ex
         return job_templates_ids
 
-    def create_workflow_steps(self, tosca_node,organization_id=None,credentials=None):
+    def create_workflow_steps(self, tosca_node,organization_id=None,credentials=None,tosca_node_name=None):
         if 'interfaces' in tosca_node:
             workflow_steps = {}
             interfaces = tosca_node['interfaces']
@@ -305,7 +305,7 @@ class AWXService:
                     for step_name in interfaces[interface_name]:
                         workflow_step = {}
                         step = interfaces[interface_name][step_name]
-                        wf_name = interface_name + '.' + step_name
+                        wf_name = tosca_node_name + '.' + step_name
                         logger.info('Creating steps: ' + wf_name)
                         extra_variables = None
                         if not 'repository' in step['inputs']:
@@ -377,12 +377,14 @@ class AWXService:
             if graph.in_degree(step_name) == 0:
                 step = steps[step_name]
                 activities = step['activities']
+                target = step['target']
+                template_name = target + '.' + step_name
                 for activity in activities:
                     parent_node_ids = []
                     if 'call_operation' in activity:
                         call_operation = activity['call_operation']
                         parent_node_ids.append(self.create_root_workflow_node(workflow_id=workflow_id,
-                                                                            job_template_id=topology_template_workflow_steps[call_operation]['job_template'],
+                                                                            job_template_id=topology_template_workflow_steps[template_name]['job_template'],
                                                                             step_name=step_name)[0])
                     for parent_node in parent_node_ids:
                         for outcome in ['on_failure', 'on_success']:
@@ -440,13 +442,16 @@ class AWXService:
         if not child in steps:
             raise Exception(child+ ' is set as step in the workflow but could not be found in the workflow steps: '+str(steps))
         activities = steps[child]['activities']
+        step = steps[child]
+        target = step['target']
+        template_name = target + '.' + child
         for activity in activities:
             if 'call_operation' in activity:
                 call_operation = activity['call_operation']
-                if 'job_template' not in topology_template_workflow_steps[call_operation]:
-                    raise Exception(str(topology_template_workflow_steps[call_operation])+' with call_operation: '+call_operation+' has no job_template definition. Check the interface implementation')
+                if 'job_template' not in topology_template_workflow_steps[template_name]:
+                    raise Exception(str(topology_template_workflow_steps[template_name])+' with call_operation: '+call_operation+' has no job_template definition. Check the interface implementation')
                 child_id = self.add_child_node(identifier=child,
-                                               unified_job_template=topology_template_workflow_steps[call_operation]['job_template'],
+                                               unified_job_template=topology_template_workflow_steps[template_name]['job_template'],
                                                path=path,workflow_id=workflow_id)
                 # if not child_id:
                 #     raise Exception('Failed to create child node for: '+child)

@@ -444,10 +444,11 @@ class AWXService:
         activities = steps[child]['activities']
         step = steps[child]
         target = step['target']
-        template_name = target + '.' + child
+
         for activity in activities:
             if 'call_operation' in activity:
                 call_operation = activity['call_operation']
+                template_name = target + '.' + call_operation.split('.')[1]
                 if 'job_template' not in topology_template_workflow_steps[template_name]:
                     raise Exception(str(topology_template_workflow_steps[template_name])+' with call_operation: '+call_operation+' has no job_template definition. Check the interface implementation')
                 child_id = self.add_child_node(identifier=child,

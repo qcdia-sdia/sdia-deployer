@@ -164,7 +164,7 @@ class TestDeployer(unittest.TestCase):
                 logger.info('Resolving function values for: '+tosca_node_name)
                 tosca_node = tosca_helper.resolve_function_values(tosca_node)
                 logger.info('Creating workflow steps for: ' + tosca_node_name)
-                node_workflow_steps = awx.create_workflow_steps(tosca_node)
+                node_workflow_steps = awx.create_workflow_templates(tosca_node)
                 topology_template_workflow_steps.update(node_workflow_steps)
             workflows = tosca_helper.get_workflows()
             if workflows:

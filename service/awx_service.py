@@ -378,11 +378,11 @@ class AWXService:
                 step = steps[step_name]
                 activities = step['activities']
                 target = step['target']
-                template_name = target + '.' + step_name
                 for activity in activities:
                     parent_node_ids = []
                     if 'call_operation' in activity:
                         call_operation = activity['call_operation']
+                        template_name = target + '.' + call_operation.split('.')[1]
                         parent_node_ids.append(self.create_root_workflow_node(workflow_id=workflow_id,
                                                                             job_template_id=topology_template_workflow_steps[template_name]['job_template'],
                                                                             step_name=step_name)[0])

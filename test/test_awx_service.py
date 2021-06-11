@@ -53,8 +53,8 @@ class TestAWXService(unittest.TestCase):
                             credential = tosca_node['properties']['user_key_pair']
 
                     logger.info('Creating workflow steps for: ' + tosca_node_name)
-                    node_workflow_steps = awx.create_workflow_steps(tosca_node, organization_id=organization_id,
-                                                                    credential=credential)
+                    node_workflow_steps = awx.create_workflow_templates(tosca_node, organization_id=organization_id,
+                                                                        credential=credential)
                     topology_template_workflow_steps.update(node_workflow_steps)
 
                 workflows = tosca_helper.get_workflows()

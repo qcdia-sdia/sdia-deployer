@@ -295,44 +295,44 @@ class AWXService:
                     raise ex
         return job_templates_ids
 
-    def create_workflow_steps(self, tosca_node,organization_id=None,credentials=None,tosca_node_name=None):
+    def create_workflow_templates(self, tosca_node, organization_id=None, credentials=None, tosca_node_name=None):
         if 'interfaces' in tosca_node:
             workflow_steps = {}
             interfaces = tosca_node['interfaces']
             for interface_name in interfaces:
                 ancestors = self.tosca_helper.get_interface_ancestors(interface_name)
                 if 'tosca.interfaces.QC.Ansible' in ancestors:
-                    for step_name in interfaces[interface_name]:
-                        workflow_step = {}
-                        step = interfaces[interface_name][step_name]
-                        wf_name = tosca_node_name + '.' + step_name
-                        logger.info('Creating steps: ' + wf_name)
+                    for template_name in interfaces[interface_name]:
+                        workflow_template_node = {}
+                        template = interfaces[interface_name][template_name]
+                        template_full_name = tosca_node_name + '.' + template_name
+                        logger.info('Creating template: ' + template_full_name)
                         extra_variables = None
-                        if not 'repository' in step['inputs']:
-                            raise Exception('Workflow steps for: '+wf_name+' have no repository: '+str(step))
-                        if 'inputs' in step and 'repository' in step['inputs']:
-                            repository_url = step['inputs']['repository']
+                        if not 'repository' in template['inputs']:
+                            raise Exception('Workflow steps for: '+template_full_name+' have no repository: '+str(template))
+                        if 'inputs' in template and 'repository' in template['inputs']:
+                            repository_url = template['inputs']['repository']
                             project_id = self.create_project(project_name=repository_url, scm_url=repository_url,
                                                              scm_branch='master', scm_type='git',organization_id=organization_id)
-                            workflow_step[wf_name] = {'project': project_id[0]}
-                            if not 'inventory' in step['inputs']:
-                                raise Exception(step_name + ' has no inventory')
-                            inventory = step['inputs']['inventory']
-                            inventory_id = self.create_inventory(inventory_name=wf_name, inventory=inventory,organization_id=organization_id)
-                            workflow_step[wf_name]['inventory'] = inventory_id
-                            logger.info('Created inventory: '+str(inventory_id)+' for :'+wf_name)
-                        if 'implementation' in step:
-                            if 'extra_variables' in step['inputs']:
-                                extra_variables = self.get_variables(extra_variables=step['inputs']['extra_variables'])
-                            workflow_step[wf_name]['implementation'] = step['implementation']
-                            if not workflow_step[wf_name]['inventory']:
-                                raise Exception(wf_name + ' is missing inventory')
-                            workflow_step[wf_name]['job_template'] = self.create_job_template(workflow_step,
+                            workflow_template_node[template_full_name] = {'project': project_id[0]}
+                            if not 'inventory' in template['inputs']:
+                                raise Exception(template_name + ' has no inventory')
+                            inventory = template['inputs']['inventory']
+                            inventory_id = self.create_inventory(inventory_name=template_full_name, inventory=inventory,organization_id=organization_id)
+                            workflow_template_node[template_full_name]['inventory'] = inventory_id
+                            logger.info('Created inventory: '+str(inventory_id)+' for :'+template_full_name)
+                        if 'implementation' in template:
+                            if 'extra_variables' in template['inputs']:
+                                extra_variables = self.get_variables(extra_variables=template['inputs']['extra_variables'])
+                            workflow_template_node[template_full_name]['implementation'] = template['implementation']
+                            if not workflow_template_node[template_full_name]['inventory']:
+                                raise Exception(template_full_name + ' is missing inventory')
+                            workflow_template_node[template_full_name]['job_template'] = self.create_job_template(workflow_template_node,
                                                                                               credentials=credentials,
                                                                                               organization_id=organization_id,
                                                                                               extra_vars=extra_variables)[0]
-                        if workflow_step:
-                            workflow_steps.update(workflow_step)
+                        if workflow_template_node:
+                            workflow_steps.update(workflow_template_node)
             return workflow_steps
 
     def update_project(self, project_id):
@@ -378,11 +378,11 @@ class AWXService:
                 step = steps[step_name]
                 activities = step['activities']
                 target = step['target']
-                template_name = target + '.' + step_name
                 for activity in activities:
                     parent_node_ids = []
                     if 'call_operation' in activity:
                         call_operation = activity['call_operation']
+                        template_name = target + '.' + call_operation.split('.')[1]
                         parent_node_ids.append(self.create_root_workflow_node(workflow_id=workflow_id,
                                                                             job_template_id=topology_template_workflow_steps[template_name]['job_template'],
                                                                             step_name=step_name)[0])

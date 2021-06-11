@@ -72,7 +72,7 @@ def execute_workflows(workflow=None, workflow_name=None,topology_template_workfl
     if 'description' in workflow:
         description = workflow['description']
     wf_ids = awx.create_workflow(description=description, workflow_name=workflow_name)
-    logger.info('Created workflow with ID: ' + str(wf_ids[0]))
+    logger.info('Created workflow with name:'+ workflow_name +', ID: ' + str(wf_ids[0]))
     workflow_node_ids = awx.create_dag(workflow_id=wf_ids[0],
                                        tosca_workflow=workflow,
                                        topology_template_workflow_steps=topology_template_workflow_steps)
@@ -148,8 +148,8 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
 
                 credentials = extract_credentials_from_node(tosca_node)
                 logger.info('Creating workflow steps for: ' + tosca_node_name)
-                node_workflow_steps = awx.create_workflow_steps(tosca_node, organization_id=organization_id,
-                                                                credentials=credentials,tosca_node_name=tosca_node_name)
+                node_workflow_steps = awx.create_workflow_templates(tosca_node, organization_id=organization_id,
+                                                                    credentials=credentials, tosca_node_name=tosca_node_name)
                 topology_template_workflow_steps.update(node_workflow_steps)
 
             workflows = tosca_helper.get_workflows()

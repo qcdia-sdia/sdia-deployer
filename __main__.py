@@ -75,7 +75,8 @@ def execute_workflows(workflow=None, workflow_name=None,topology_template_workfl
     logger.info('Created workflow with name:'+ workflow_name +', ID: ' + str(wf_ids[0]))
     workflow_node_ids = awx.create_dag(workflow_id=wf_ids[0],
                                        tosca_workflow=workflow,
-                                       topology_template_workflow_steps=topology_template_workflow_steps)
+                                       topology_template_workflow_steps=topology_template_workflow_steps,
+                                       workflow_name=workflow_name)
     logger.info('Added nodes to workflow')
     for wf_id in wf_ids:
         wf_job_ids = awx.launch(wf_id)
@@ -90,7 +91,8 @@ def execute_workflows(workflow=None, workflow_name=None,topology_template_workfl
             for workflow_node in workflow_nodes:
                 if 'job' in workflow_node['summary_fields']:
                     job =workflow_node['summary_fields']['job']
-                    tosca_template_dict = tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict,job=job,workflow_name=workflow_name)
+                    tosca_template_dict = tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict,
+                                                                      job=job,workflow_name=workflow_name)
             sleep(8)
         job_status = awx.get_workflow_status(launched_id)
         if 'failed' == job_status:
@@ -141,22 +143,34 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
             logger.info('Creating organization: sdia')
             organization_id = awx.create_organization('sdia')
             topology_template_workflow_steps = {}
+            credentials = []
             for tosca_node_name in node_templates:
                 tosca_node = node_templates[tosca_node_name]
                 logger.info('Resolving function values for: ' + tosca_node_name)
                 tosca_node = tosca_helper.resolve_function_values(tosca_node)
 
                 credentials = extract_credentials_from_node(tosca_node)
-                logger.info('Creating workflow steps for: ' + tosca_node_name)
-                node_workflow_steps = awx.create_workflow_templates(tosca_node, organization_id=organization_id,
-                                                                    credentials=credentials, tosca_node_name=tosca_node_name)
-                topology_template_workflow_steps.update(node_workflow_steps)
+                # logger.info('Creating workflow steps for: ' + tosca_node_name)
+                # node_workflow_steps = awx.create_workflow_templates(tosca_node, organization_id=organization_id,
+                #                                                     credentials=credentials, tosca_node_name=tosca_node_name)
+                # topology_template_workflow_steps.update(node_workflow_steps)
 
             workflows = tosca_helper.get_workflows()
             if workflows:
                 for workflow_name in workflows:
                     workflow = workflows[workflow_name]
                     can_run = tosca_helper.check_workflow_preconditions(workflow,tosca_template_dict)
+                    if can_run:
+                        steps  = workflow['steps']
+                        for step_name in steps:
+                            node_workflow_steps = awx.create_workflow_templates(tosca_workflow_step=steps[step_name], organization_id=organization_id,
+                                                                                credentials=credentials, node_templates=node_templates,
+                                                                                step_name=step_name,workflow_name=workflow_name)
+                            topology_template_workflow_steps.update(node_workflow_steps)
+            if workflows:
+                for workflow_name in workflows:
+                    workflow = workflows[workflow_name]
+                    can_run = tosca_helper.check_workflow_preconditions(workflow, tosca_template_dict)
                     if can_run:
                         tosca_template_dict = execute_workflows(workflow=workflow,workflow_name=workflow_name,
                                                                      topology_template_workflow_steps=topology_template_workflow_steps,

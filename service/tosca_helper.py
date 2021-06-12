@@ -200,7 +200,7 @@ class ToscaHelper:
 
     def set_node_state(self,tosca_template_dict=None,job=None,workflow_name=None):
         wf_steps = self.get_workflows()[workflow_name]['steps']
-        target_name = None
+
         state = None
         target_wf_step_name = job['name'].split('.')[1]
         # Match job name with call_operation

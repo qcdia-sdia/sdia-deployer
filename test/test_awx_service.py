@@ -85,7 +85,8 @@ class TestAWXService(unittest.TestCase):
             logger.info('Created workflow with ID: ' + str(wf_ids[0]))
             workflow_node_ids = awx.create_dag(workflow_id=wf_ids[0],
                                                tosca_workflow=workflow,
-                                               topology_template_workflow_steps=topology_template_workflow_steps)
+                                               topology_template_workflow_steps=topology_template_workflow_steps,
+                                               workflow_name=workflow_name)
             logger.info('Added nodes to workflow')
             for wf_id in wf_ids:
                 wf_job_ids = awx.launch(wf_id)

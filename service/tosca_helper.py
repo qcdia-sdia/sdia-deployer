@@ -202,19 +202,12 @@ class ToscaHelper:
         wf_steps = self.get_workflows()[workflow_name]['steps']
         target_name = None
         state = None
-        call_operation_name = job['name']
-        target_wf_step_name = None
+        target_wf_step_name = job['name'].split('.')[1]
         # Match job name with call_operation
-        for wf_step_name in wf_steps:
-            wf_step = wf_steps[wf_step_name]
-            activities = wf_step['activities']
-            for activity in activities:
-                if 'call_operation' in activity and call_operation_name == activity['call_operation']:
-                    if not 'target' in wf_step:
-                        raise Exception('workflow step: '+str(wf_step) +' has no target')
-                    target_name = wf_step['target']
-                    target_wf_step_name = wf_step_name
-                    break
+        wf_step = wf_steps[target_wf_step_name]
+        if not 'target' in wf_step:
+            raise Exception('workflow step: '+str(wf_step) +' has no target')
+        target_name = wf_step['target']
 
         if target_name and target_wf_step_name:
             #Should we upadate the state?

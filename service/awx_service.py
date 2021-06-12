@@ -426,7 +426,7 @@ class AWXService:
                     parent_node_ids = []
                     if 'call_operation' in activity:
                         call_operation = activity['call_operation']
-                        template_name = workflow_name + '.' + call_operation.split('.')[1]
+                        template_name = workflow_name + '.' + step_name
                         parent_node_ids.append(self.create_root_workflow_node(workflow_id=workflow_id,
                                                                             job_template_id=topology_template_workflow_steps[template_name]['job_template'],
                                                                             step_name=step_name)[0])
@@ -440,12 +440,12 @@ class AWXService:
                                 elif isinstance(node_children, list):
                                     children = node_children
                                 for child in children:
-                                    workflow_node_ids = self.create_workflow_nodes(parent_id=parent_node,
-                                                                                    child=child,
-                                                                                    label=outcome,
-                                                                                    steps=steps,
-                                                                                    topology_template_workflow_steps=topology_template_workflow_steps,
-                                                                                    workflow_id=workflow_id,workflow_name=workflow_name)
+                                    self.create_workflow_nodes(parent_id=parent_node,
+                                                                child=child,
+                                                                label=outcome,
+                                                                steps=steps,
+                                                                topology_template_workflow_steps=topology_template_workflow_steps,
+                                                                workflow_id=workflow_id,workflow_name=workflow_name)
         return None
 
     def add_edge(self,graph=None,parent_name=None, children=None,label=None):
@@ -487,12 +487,10 @@ class AWXService:
             raise Exception(child+ ' is set as step in the workflow but could not be found in the workflow steps: '+str(steps))
         activities = steps[child]['activities']
         step = steps[child]
-        target = step['target']
-
         for activity in activities:
             if 'call_operation' in activity:
                 call_operation = activity['call_operation']
-                template_name = workflow_name + '.' + call_operation.split('.')[1]
+                template_name = workflow_name + '.' + child
                 if 'job_template' not in topology_template_workflow_steps[template_name]:
                     raise Exception(str(topology_template_workflow_steps[template_name])+' with call_operation: '+call_operation+' has no job_template definition. Check the interface implementation')
                 child_id = self.add_child_node(identifier=child,

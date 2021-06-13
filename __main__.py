@@ -183,8 +183,11 @@ def decrypt_credentials(tosca_template_dict):
         if node_template['type'] == 'tosca.nodes.QC.VM.Compute':
             continue
         credentials = ToscaHelper.extract_credentials_from_node(node_template)
+
         if credentials:
             for credential in credentials:
+                if 'protocol' in credential and credential['protocol'] == 'ssh':
+                    continue
                 if 'token' in credential:
                     token = credential['token']
                     credential['token'] = decrypt(token,enc_key)
@@ -205,6 +208,8 @@ def encrypt_credentials(tosca_template_dict):
         credentials = ToscaHelper.extract_credentials_from_node(node_template)
         if credentials:
             for credential in credentials:
+                if 'protocol' in credential and credential['protocol'] == 'ssh':
+                    continue
                 if 'token' in credential:
                     token = credential['token']
                     credential['token'] = encrypt(token,enc_key)

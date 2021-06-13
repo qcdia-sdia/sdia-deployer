@@ -300,42 +300,49 @@ class AWXService:
                                   credentials=None, node_templates=None, step_name=None,workflow_name=None):
         awx_workflow_steps = {}
         tosca_node = node_templates[tosca_workflow_step['target']]
+        activities = tosca_workflow_step['activities']
+        call_operation = None
+        for activity in activities:
+            if 'call_operation' in activity:
+                call_operation = activity['call_operation']
+                break
         if 'interfaces' in tosca_node:
             interfaces = tosca_node['interfaces']
-            for interface_name in interfaces:
-                ancestors = self.tosca_helper.get_interface_ancestors(interface_name)
-                if 'tosca.interfaces.QC.Ansible' in ancestors:
-                    for tosca_interface_job in interfaces[interface_name]:
-                        workflow_template_node = {}
-                        template = interfaces[interface_name][tosca_interface_job]
-                        template_name = workflow_name+'.'+ step_name
-                        logger.info('Creating template: ' + template_name)
-                        extra_variables = None
-                        if not 'repository' in template['inputs']:
-                            raise Exception('Workflow steps for: '+template_name+' have no repository: '+str(template))
-                        if 'inputs' in template and 'repository' in template['inputs']:
-                            repository_url = template['inputs']['repository']
-                            project_id = self.create_project(project_name=repository_url, scm_url=repository_url,
-                                                             scm_branch='master', scm_type='git',organization_id=organization_id)
-                            workflow_template_node[template_name] = {'project': project_id[0]}
-                            if not 'inventory' in template['inputs']:
-                                raise Exception(tosca_interface_job + ' has no inventory')
-                            inventory = template['inputs']['inventory']
-                            inventory_id = self.create_inventory(inventory_name=template_name, inventory=inventory,organization_id=organization_id)
-                            workflow_template_node[template_name]['inventory'] = inventory_id
-                            logger.info('Created inventory: '+str(inventory_id)+' for :'+template_name)
-                        if 'implementation' in template:
-                            if 'extra_variables' in template['inputs']:
-                                extra_variables = self.get_variables(extra_variables=template['inputs']['extra_variables'])
-                            workflow_template_node[template_name]['implementation'] = template['implementation']
-                            if not workflow_template_node[template_name]['inventory']:
-                                raise Exception(template_name + ' is missing inventory')
-                            workflow_template_node[template_name]['job_template'] = self.create_job_template(workflow_template_node,
-                                                                                              credentials=credentials,
-                                                                                              organization_id=organization_id,
-                                                                                              extra_vars=extra_variables)[0]
-                        if workflow_template_node:
-                            awx_workflow_steps.update(workflow_template_node)
+            interface_name = call_operation.split('.')[0]
+            tosca_interface_job = call_operation.split('.')[1]
+            ancestors = self.tosca_helper.get_interface_ancestors(interface_name)
+            if 'tosca.interfaces.QC.Ansible' in ancestors:
+                workflow_template_node = {}
+                template = interfaces[interface_name][tosca_interface_job]
+                template_name = workflow_name+'.'+ step_name
+                logger.info('Creating template: ' + template_name)
+                extra_variables = None
+                if not 'repository' in template['inputs']:
+                    raise Exception('Workflow steps for: '+template_name+' have no repository: '+str(template))
+                if 'inputs' in template and 'repository' in template['inputs']:
+                    repository_url = template['inputs']['repository']
+                    project_id = self.create_project(project_name=repository_url, scm_url=repository_url,
+                                                     scm_branch='master', scm_type='git',organization_id=organization_id)
+                    workflow_template_node[template_name] = {'project': project_id[0]}
+                    if not 'inventory' in template['inputs']:
+                        raise Exception(tosca_interface_job + ' has no inventory')
+                    inventory = template['inputs']['inventory']
+                    inventory_id = self.create_inventory(inventory_name=template_name, inventory=inventory,organization_id=organization_id)
+                    workflow_template_node[template_name]['inventory'] = inventory_id
+                    logger.info('Created inventory: '+str(inventory_id)+' for :'+template_name)
+                if 'implementation' in template:
+                    if 'extra_variables' in template['inputs']:
+                        extra_variables = self.get_variables(extra_variables=template['inputs']['extra_variables'])
+                    workflow_template_node[template_name]['implementation'] = template['implementation']
+                    if not workflow_template_node[template_name]['inventory']:
+                        raise Exception(template_name + ' is missing inventory')
+                    workflow_template_node[template_name]['job_template'] = self.create_job_template(workflow_template_node,
+                                                                                      credentials=credentials,
+                                                                                      organization_id=organization_id,
+                                                                                      extra_vars=extra_variables)[0]
+                if workflow_template_node:
+                    logger.info('Created workflow_template_node: ' + str(workflow_template_node))
+                    awx_workflow_steps.update(workflow_template_node)
         return awx_workflow_steps
 
 

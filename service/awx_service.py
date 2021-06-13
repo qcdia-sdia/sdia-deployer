@@ -18,6 +18,7 @@ import validators
 import yaml
 from ansible.inventory.manager import InventoryManager
 from ansible.parsing.dataloader import DataLoader
+from service.tosca_helper import ToscaHelper
 
 logger = logging.getLogger(__name__)
 
@@ -297,7 +298,7 @@ class AWXService:
 
 
     def create_workflow_templates(self, tosca_workflow_step=None, organization_id=None,
-                                  credentials=None, node_templates=None, step_name=None,workflow_name=None):
+                                  node_templates=None, step_name=None,workflow_name=None):
         awx_workflow_steps = {}
         tosca_node = node_templates[tosca_workflow_step['target']]
         activities = tosca_workflow_step['activities']
@@ -336,6 +337,7 @@ class AWXService:
                     workflow_template_node[template_name]['implementation'] = template['implementation']
                     if not workflow_template_node[template_name]['inventory']:
                         raise Exception(template_name + ' is missing inventory')
+                    credentials = ToscaHelper.extract_credentials_from_node(tosca_node)
                     workflow_template_node[template_name]['job_template'] = self.create_job_template(workflow_template_node,
                                                                                       credentials=credentials,
                                                                                       organization_id=organization_id,

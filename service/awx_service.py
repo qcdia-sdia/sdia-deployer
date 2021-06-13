@@ -19,6 +19,8 @@ import yaml
 from ansible.inventory.manager import InventoryManager
 from ansible.parsing.dataloader import DataLoader
 from service.tosca_helper import ToscaHelper
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -430,12 +432,13 @@ class AWXService:
             if graph.in_degree(step_name) == 0:
                 step = steps[step_name]
                 activities = step['activities']
-                target = step['target']
+                # target = step['target']
                 for activity in activities:
                     parent_node_ids = []
                     if 'call_operation' in activity:
-                        call_operation = activity['call_operation']
+                        # call_operation = activity['call_operation']
                         template_name = workflow_name + '.' + step_name
+
                         parent_node_ids.append(self.create_root_workflow_node(workflow_id=workflow_id,
                                                                             job_template_id=topology_template_workflow_steps[template_name]['job_template'],
                                                                             step_name=step_name)[0])

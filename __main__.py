@@ -71,6 +71,7 @@ def execute_workflows(workflow=None, workflow_name=None,topology_template_workfl
     description = None
     if 'description' in workflow:
         description = workflow['description']
+    logger.info('Creating workflow: ' + str(workflow_name))
     wf_ids = awx.create_workflow(description=description, workflow_name=workflow_name)
     logger.info('Created workflow with name:'+ workflow_name +', ID: ' + str(wf_ids[0]))
     workflow_node_ids = awx.create_dag(workflow_id=wf_ids[0],
@@ -93,7 +94,7 @@ def execute_workflows(workflow=None, workflow_name=None,topology_template_workfl
                     job =workflow_node['summary_fields']['job']
                     tosca_template_dict = tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict,
                                                                       job=job,workflow_name=workflow_name)
-            sleep(8)
+            sleep(10)
         job_status = awx.get_workflow_status(launched_id)
         if 'failed' == job_status:
             raise Exception('Workflow execution failed')
@@ -130,7 +131,7 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                              tosca_helper=tosca_helper)
             logger.info('Creating organization: sdia')
             organization_id = awx.create_organization('sdia')
-            topology_template_workflow_steps = {}
+
 
             for tosca_node_name in node_templates:
                 tosca_node = node_templates[tosca_node_name]
@@ -140,10 +141,12 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
             workflows = tosca_helper.get_workflows()
             if workflows:
                 for workflow_name in workflows:
+                    topology_template_workflow_steps = {}
                     workflow = workflows[workflow_name]
                     can_run = tosca_helper.check_workflow_preconditions(workflow,tosca_template_dict)
+                    logger.info('workflow: ' +workflow_name+ ' can run: ' +str(can_run))
                     if can_run:
-                        steps  = workflow['steps']
+                        steps = workflow['steps']
                         for step_name in steps:
                             logger.info('Created step_name: ' + str(step_name))
                             node_workflow_steps = awx.create_workflow_templates(tosca_workflow_step=steps[step_name],
@@ -151,15 +154,11 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                                                                                 node_templates=node_templates,
                                                                                 step_name=step_name,workflow_name=workflow_name)
                             topology_template_workflow_steps.update(node_workflow_steps)
-            if workflows:
-                for workflow_name in workflows:
-                    workflow = workflows[workflow_name]
-                    can_run = tosca_helper.check_workflow_preconditions(workflow, tosca_template_dict)
-                    if can_run:
-                        tosca_template_dict = execute_workflows(workflow=workflow,workflow_name=workflow_name,
-                                                                     topology_template_workflow_steps=topology_template_workflow_steps,
-                                                                     awx=awx,
-                                                                    tosca_template_dict=tosca_template_dict)
+
+                        tosca_template_dict = execute_workflows(workflow=workflow, workflow_name=workflow_name,
+                                                                topology_template_workflow_steps=topology_template_workflow_steps,
+                                                                awx=awx,
+                                                                tosca_template_dict=tosca_template_dict)
         else:
             raise Exception('Could not connect to sure tosca at '+sure_tosca_base_url)
     except (Exception) as ex:

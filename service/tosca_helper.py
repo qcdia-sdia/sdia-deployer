@@ -268,6 +268,20 @@ class ToscaHelper:
             return predicate_conditions_check
         return False
 
+    @staticmethod
+    def extract_credentials_from_node(tosca_node):
+        credentials = []
+        for name in ['attributes', 'properties']:
+            if name in tosca_node:
+                # for cred_name in ['credential', 'credentials', 'user_key_pair']:
+                for cred_name in ['credential', 'credentials','user_key_pair']:
+                    if cred_name in tosca_node[name]:
+                        credential = tosca_node[name][cred_name]
+                        if isinstance(credential, list):
+                            credentials.extend(credential)
+                        else:
+                            credentials.append(credential)
+        return credentials
 
 def get_interface_types(node):
     interface_type_names = []
@@ -275,3 +289,5 @@ def get_interface_types(node):
         for interface in node.node_template.interfaces:
             interface_type_names.append(interface)
         return interface_type_names
+
+

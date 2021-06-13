@@ -113,19 +113,7 @@ def execute_workflows(workflow=None, workflow_name=None,topology_template_workfl
     return tosca_template_dict
 
 
-def extract_credentials_from_node(tosca_node):
-    credentials = []
-    for name in ['attributes', 'properties']:
-        if name in tosca_node:
-            # for cred_name in ['credential', 'credentials', 'user_key_pair']:
-            for cred_name in ['credential', 'credentials']:
-                if cred_name in tosca_node[name]:
-                    credential = tosca_node[name][cred_name]
-                    if isinstance(credential, list):
-                        credentials.extend(credential)
-                    else:
-                        credentials.append(credential)
-    return credentials
+
 
 
 def awx(tosca_template_path=None, tosca_template_dict=None):
@@ -143,17 +131,11 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
             logger.info('Creating organization: sdia')
             organization_id = awx.create_organization('sdia')
             topology_template_workflow_steps = {}
-            credentials = []
+
             for tosca_node_name in node_templates:
                 tosca_node = node_templates[tosca_node_name]
                 logger.info('Resolving function values for: ' + tosca_node_name)
                 tosca_node = tosca_helper.resolve_function_values(tosca_node)
-
-                credentials = extract_credentials_from_node(tosca_node)
-                # logger.info('Creating workflow steps for: ' + tosca_node_name)
-                # node_workflow_steps = awx.create_workflow_templates(tosca_node, organization_id=organization_id,
-                #                                                     credentials=credentials, tosca_node_name=tosca_node_name)
-                # topology_template_workflow_steps.update(node_workflow_steps)
 
             workflows = tosca_helper.get_workflows()
             if workflows:
@@ -166,7 +148,7 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                             logger.info('Created step_name: ' + str(step_name))
                             node_workflow_steps = awx.create_workflow_templates(tosca_workflow_step=steps[step_name],
                                                                                 organization_id=organization_id,
-                                                                                credentials=credentials, node_templates=node_templates,
+                                                                                node_templates=node_templates,
                                                                                 step_name=step_name,workflow_name=workflow_name)
                             topology_template_workflow_steps.update(node_workflow_steps)
             if workflows:
@@ -199,7 +181,9 @@ def decrypt_credentials(tosca_template_dict):
     enc_key = bytes(secret, 'utf-8')
     for node_template_name in node_templates:
         node_template = node_templates[node_template_name]
-        credentials = extract_credentials_from_node(node_template)
+        if node_template['type'] == 'tosca.nodes.QC.VM.Compute':
+            continue
+        credentials = ToscaHelper.extract_credentials_from_node(node_template)
         if credentials:
             for credential in credentials:
                 if 'token' in credential:
@@ -219,7 +203,7 @@ def encrypt_credentials(tosca_template_dict):
     enc_key = bytes(secret, 'utf-8')
     for node_template_name in node_templates:
         node_template = node_templates[node_template_name]
-        credentials = extract_credentials_from_node(node_template)
+        credentials = ToscaHelper.extract_credentials_from_node(node_template)
         if credentials:
             for credential in credentials:
                 if 'token' in credential:
@@ -272,7 +256,7 @@ def handle_delivery(message):
     owner = parsed_json_message['owner']
     tosca_file_name = 'tosca_template'
     tosca_template_dict = parsed_json_message['toscaTemplate']
-    tosca_template_dict =  decrypt_credentials(tosca_template_dict)
+    tosca_template_dict = decrypt_credentials(tosca_template_dict)
 
     tosca_template_path = save_tosca_template(tosca_template_dict)
     # if 'workflows' in tosca_template_dict['topology_template']:

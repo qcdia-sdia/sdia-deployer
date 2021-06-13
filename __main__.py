@@ -163,7 +163,9 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                     if can_run:
                         steps  = workflow['steps']
                         for step_name in steps:
-                            node_workflow_steps = awx.create_workflow_templates(tosca_workflow_step=steps[step_name], organization_id=organization_id,
+                            logger.info('Created step_name: ' + str(step_name))
+                            node_workflow_steps = awx.create_workflow_templates(tosca_workflow_step=steps[step_name],
+                                                                                organization_id=organization_id,
                                                                                 credentials=credentials, node_templates=node_templates,
                                                                                 step_name=step_name,workflow_name=workflow_name)
                             topology_template_workflow_steps.update(node_workflow_steps)

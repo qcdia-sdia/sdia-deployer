@@ -344,6 +344,8 @@ class AWXService:
                                                                                       credentials=credentials,
                                                                                       organization_id=organization_id,
                                                                                       extra_vars=extra_variables)[0]
+                else:
+                    raise Exception(template_name+' has no implementation!')
                 if workflow_template_node:
                     logger.info('Created workflow_template_node: ' + str(workflow_template_node))
                     awx_workflow_steps.update(workflow_template_node)

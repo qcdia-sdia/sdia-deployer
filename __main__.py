@@ -207,7 +207,6 @@ def encrypt_credentials(tosca_template_dict):
                 if 'token' not in credential:
                 # This is a tmp fix for the tosca parser. The tosca.datatypes.Credential which requires token
                     token = 'dG9rZW4K'
-                    credential['token'] = encrypt(token, enc_key)
                 if 'token' in credential:
                     token = credential['token']
                     credential['token'] = encrypt(token, enc_key)

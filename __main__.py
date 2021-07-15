@@ -141,11 +141,12 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                         steps = workflow['steps']
                         for step_name in steps:
                             logger.info('Created step_name: ' + str(step_name))
-                            node_workflow_steps = awx_inst.create_workflow_templates(tosca_workflow_step=steps[step_name],
-                                                                                     organization_id=organization_id,
-                                                                                     node_templates=node_templates,
-                                                                                     step_name=step_name,
-                                                                                     workflow_name=workflow_name)
+                            node_workflow_steps = awx_inst.create_workflow_templates(
+                                tosca_workflow_step=steps[step_name],
+                                organization_id=organization_id,
+                                node_templates=node_templates,
+                                step_name=step_name,
+                                workflow_name=workflow_name)
                             topology_template_workflow_steps.update(node_workflow_steps)
 
                         tosca_template_dict = execute_workflows(workflow=workflow, workflow_name=workflow_name,
@@ -202,11 +203,11 @@ def encrypt_credentials(tosca_template_dict):
         credentials = ToscaHelper.extract_credentials_from_node(node_template)
         if credentials:
             for credential in credentials:
+                if 'token' not in credential:
+                    # This is a tmp fix for the tosca parser. The tosca.datatypes.Credential which requires token
+                    credential['token'] = 'dG9rZW4K'
                 if 'protocol' in credential and credential['protocol'] == 'ssh':
                     continue
-                if 'token' not in credential:
-                # This is a tmp fix for the tosca parser. The tosca.datatypes.Credential which requires token
-                    credential['token'] = 'dG9rZW4K'
                 if 'token' in credential:
                     token = credential['token']
                     credential['token'] = encrypt(token, enc_key)

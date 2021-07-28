@@ -203,6 +203,8 @@ def encrypt_credentials(tosca_template_dict):
         credentials = ToscaHelper.extract_credentials_from_node(node_template)
         if credentials:
             for credential in credentials:
+                if 'get_attribute' in credential or 'get_property' in credential:
+                    continue
                 if 'token' not in credential:
                     # This is a tmp fix for the tosca parser. The tosca.datatypes.Credential which requires token
                     credential['token'] = 'dG9rZW4K'

@@ -470,7 +470,8 @@ class AWXService:
                                                                label=outcome,
                                                                steps=steps,
                                                                topology_template_workflow_steps=topology_template_workflow_steps,
-                                                               workflow_id=workflow_id, workflow_name=workflow_name)
+                                                               workflow_id=workflow_id, workflow_name=workflow_name,
+                                                               current_time=current_time)
         return None
 
     def add_edge(self, graph=None, parent_name=None, children=None, label=None):
@@ -502,7 +503,7 @@ class AWXService:
         return workflow_job_template_node_ids
 
     def create_workflow_nodes(self, parent_id, child, label, steps, topology_template_workflow_steps, workflow_id=None,
-                              workflow_name=None):
+                              workflow_name=None,current_time=None):
         if not parent_id:
             raise Exception('Cannot create workflow nodes: ' + str(steps.keys()) + ' parent_id is None')
         path = 'workflow_job_template_nodes/' + str(parent_id) + '/'
@@ -518,7 +519,7 @@ class AWXService:
         for activity in activities:
             if 'call_operation' in activity:
                 call_operation = activity['call_operation']
-                template_name = workflow_name + '.' + child
+                template_name = workflow_name + '.' + child+'_'+str(current_time)
                 if 'job_template' not in topology_template_workflow_steps[template_name]:
                     raise Exception(str(topology_template_workflow_steps[
                                             template_name]) + ' with call_operation: ' + call_operation + ' has no job_template definition. Check the interface implementation')
@@ -543,7 +544,8 @@ class AWXService:
                                                        steps=steps,
                                                        topology_template_workflow_steps=topology_template_workflow_steps,
                                                        workflow_id=workflow_id,
-                                                       workflow_name=workflow_name)
+                                                       workflow_name=workflow_name,
+                                                       current_time=current_time)
         return None
 
     def add_child_node(self, identifier, unified_job_template, path, workflow_id=None):

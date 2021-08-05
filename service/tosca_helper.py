@@ -203,7 +203,7 @@ class ToscaHelper:
         wf_steps = self.get_workflows()[workflow_name_no_time]['steps']
 
         state = None
-        target_wf_step_name = job['name'].split(workflow_name+'.')[0].split('_'+str(current_time))
+        target_wf_step_name = job['name'].split(workflow_name + '.')[1].split('_' + str(current_time))[0]
         # Match job name with call_operation
         wf_step = wf_steps[target_wf_step_name]
         if not 'target' in wf_step:

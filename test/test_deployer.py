@@ -152,7 +152,7 @@ class TestDeployer(unittest.TestCase):
             raise
 
 
-    def awx(self,tosca_template_path=None, tosca_template_dict=None):
+    def awx(self,tosca_template_path=None, tosca_template_dict=None,current_time=None):
         tosca_service_is_up = ToscaHelper.service_is_up(sure_tosca_base_url)
         if tosca_service_is_up:
             tosca_helper = ToscaHelper(sure_tosca_base_url, tosca_template_path)
@@ -179,7 +179,7 @@ class TestDeployer(unittest.TestCase):
                     workflow_node_ids = awx.create_dag(workflow_id=wf_ids[0],
                                                        tosca_workflow=workflow,
                                                        topology_template_workflow_steps=topology_template_workflow_steps,
-                                                       workflow_name=workflow_name)
+                                                       workflow_name=workflow_name,current_time=current_time)
                     logger.info('Added nodes to workflow')
                     for wf_id in wf_ids:
                         wf_job_ids = awx.launch(wf_id)

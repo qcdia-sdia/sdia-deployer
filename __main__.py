@@ -10,7 +10,7 @@ import tempfile
 import traceback
 from threading import Thread
 from time import sleep
-
+import datetime
 import pika
 import yaml
 from cryptography.fernet import Fernet
@@ -61,7 +61,8 @@ def save_tosca_template(tosca_template_dict):
 
 
 def execute_workflows(workflow=None, workflow_name=None, topology_template_workflow_steps=None, awx=None,
-                      tosca_template_dict=None):
+                      tosca_template_dict=None,
+                      current_time=None):
     launched_ids = []
     attributes = {}
     description = None
@@ -73,7 +74,8 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
     workflow_node_ids = awx.create_dag(workflow_id=wf_ids[0],
                                        tosca_workflow=workflow,
                                        topology_template_workflow_steps=topology_template_workflow_steps,
-                                       workflow_name=workflow_name)
+                                       workflow_name=workflow_name,
+                                       current_time=current_time)
     logger.info('Added nodes to workflow')
     for wf_id in wf_ids:
         wf_job_ids = awx.launch(wf_id)
@@ -113,6 +115,7 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
 def awx(tosca_template_path=None, tosca_template_dict=None):
     awx_inst = None
     global tosca_helper
+    current_time = datetime.datetime.now()
     try:
         tosca_service_is_up = ToscaHelper.service_is_up(sure_tosca_base_url)
         if tosca_service_is_up:
@@ -140,19 +143,21 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                     if can_run:
                         steps = workflow['steps']
                         for step_name in steps:
+
                             logger.info('Created step_name: ' + str(step_name))
                             node_workflow_steps = awx_inst.create_workflow_templates(
                                 tosca_workflow_step=steps[step_name],
                                 organization_id=organization_id,
                                 node_templates=node_templates,
-                                step_name=step_name,
-                                workflow_name=workflow_name)
+                                step_name=step_name+'_'+str(current_time),
+                                workflow_name=workflow_name+'_'+str(current_time))
                             topology_template_workflow_steps.update(node_workflow_steps)
 
-                        tosca_template_dict = execute_workflows(workflow=workflow, workflow_name=workflow_name,
+                        tosca_template_dict = execute_workflows(workflow=workflow, workflow_name=workflow_name+'_'+str(current_time),
                                                                 topology_template_workflow_steps=topology_template_workflow_steps,
                                                                 awx=awx_inst,
-                                                                tosca_template_dict=tosca_template_dict)
+                                                                tosca_template_dict=tosca_template_dict,
+                                                                current_time=current_time)
         else:
             raise Exception('Could not connect to sure tosca at ' + sure_tosca_base_url)
     except Exception as ex:

@@ -198,11 +198,12 @@ class ToscaHelper:
                 self.find_functions(v,functions=functions)
         return functions
 
-    def set_node_state(self,tosca_template_dict=None,job=None,workflow_name=None):
-        wf_steps = self.get_workflows()[workflow_name]['steps']
+    def set_node_state(self,tosca_template_dict=None,job=None,workflow_name=None,current_time=None):
+        workflow_name_no_time = workflow_name.split('_'+str(current_time))[0]
+        wf_steps = self.get_workflows()[workflow_name_no_time]['steps']
 
         state = None
-        target_wf_step_name = job['name'].split('.')[1]
+        target_wf_step_name = job['name'].split(workflow_name + '.')[1].split('_' + str(current_time))[0]
         # Match job name with call_operation
         wf_step = wf_steps[target_wf_step_name]
         if not 'target' in wf_step:

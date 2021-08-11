@@ -671,8 +671,8 @@ class AWXService:
                         'kind': 'aws',
                         'credential_type': 5,
                         "inputs": {
-                            "password": credential['keys']['aws_access_key_id'],
-                            "username": credential['token'],
+                            "password": credential['token'],
+                            "username": credential['keys']['aws_access_key_id'],
                         }
                     }
             credentials = self.get_resources('credentials/?name=' + name + '&organization=' + str(organization_id))

@@ -663,6 +663,18 @@ class AWXService:
                             "subscription": credential['extra_properties']['subscription_id']
                         }
                     }
+                if credential['cloud_provider_name'] == 'EC2':
+                    body = {
+                        'name': name,
+                        'description': 'delete_after_execution',
+                        'organization': organization_id,
+                        'kind': 'aws',
+                        'credential_type': 5,
+                        "inputs": {
+                            "password": credential['keys']['aws_access_key_id'],
+                            "username": credential['token'],
+                        }
+                    }
             credentials = self.get_resources('credentials/?name=' + name + '&organization=' + str(organization_id))
             if credentials and credentials[0]:
                 r = self._session.delete(self.api_url + '/credentials/' + str(credentials[0]['id']),

@@ -358,6 +358,7 @@ class AWXService:
                     awx_workflow_steps.update(workflow_template_node)
         return awx_workflow_steps
 
+
     # def create_workflow_templates(self, tosca_node, organization_id=None, credentials=None, tosca_node_name=None):
     #     if 'interfaces' in tosca_node:
     #         workflow_steps = {}

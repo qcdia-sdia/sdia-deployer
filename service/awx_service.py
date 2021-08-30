@@ -528,8 +528,8 @@ class AWXService:
                                                unified_job_template=topology_template_workflow_steps[template_name][
                                                    'job_template'],
                                                path=path, workflow_id=workflow_id)
-                # if not child_id:
-                #     raise Exception('Failed to create child node for: '+child)
+                if not child_id:
+                    raise Exception('Failed to create child node for: '+child)
                 for outcome in ['on_failure', 'on_success']:
                     if outcome in activity:
                         node_children = activity[outcome]

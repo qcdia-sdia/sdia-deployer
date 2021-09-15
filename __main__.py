@@ -60,10 +60,11 @@ def save_tosca_template(tosca_template_dict):
     return tosca_template_path
 
 
-def execute_workflows(workflow=None, workflow_name=None, topology_template_workflow_steps=None, awx=None,
+def execute_workflows(workflow=None, workflow_name=None, topology_template_workflow_steps=None, awx_inst=None,
                       tosca_template_dict=None,
                       current_time=None):
     launched_ids = []
+    attributes = {}
     launched_workflow = {'name': workflow_name}
     description = None
     if 'description' in workflow:

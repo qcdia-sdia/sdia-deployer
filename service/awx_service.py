@@ -356,7 +356,7 @@ class AWXService:
                 else:
                     raise Exception(template_name + ' has no implementation!')
                 if workflow_template_node:
-                    logger.info('Created workflow_template_node: ' + str(workflow_template_node))
+                    logger.info('Created workflow_template_node: ' + str(workflow_template_node)+' number of forks: '+str(num_of_forks))
                     awx_workflow_steps.update(workflow_template_node)
         return awx_workflow_steps
 

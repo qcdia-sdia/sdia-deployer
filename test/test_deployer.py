@@ -35,11 +35,11 @@ class TestDeployer(unittest.TestCase):
         path = os.getcwd()
         print("Current Directory", path)
 
-        conf_path = '../properties.ini'
+        conf_path = '../properties.ini.template'
         try:
             f = open(conf_path)
         except IOError:
-            conf_path = 'properties.ini'
+            conf_path = 'properties.ini.template'
             f = open(conf_path)
         finally:
             f.close()

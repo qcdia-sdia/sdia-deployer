@@ -287,7 +287,7 @@ if __name__ == "__main__":
         awx_base_url, awx_username, awx_password, secret, delete_templates_after_execution
 
     config = configparser.ConfigParser()
-    config.read('properties.ini')
+    config.read('properties.ini.template')
     sure_tosca_base_url = config['tosca-sure']['base_url']
 
     awx_base_url = config['awx']['base_url']

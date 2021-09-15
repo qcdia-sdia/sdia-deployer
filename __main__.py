@@ -157,7 +157,7 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
 
                         tosca_template_dict = execute_workflows(workflow=workflow, workflow_name=workflow_name+'_'+str(current_time),
                                                                 topology_template_workflow_steps=topology_template_workflow_steps,
-                                                                awx=awx_inst,
+                                                                awx_inst=awx_inst,
                                                                 tosca_template_dict=tosca_template_dict,
                                                                 current_time=current_time)
         else:

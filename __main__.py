@@ -70,9 +70,9 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
     if 'description' in workflow:
         description = workflow['description']
     logger.info('Creating workflow: ' + str(workflow_name))
-    wf_ids = awx.create_workflow(description=description, workflow_name=workflow_name)
+    wf_ids = awx_inst.create_workflow(description=description, workflow_name=workflow_name)
     logger.info('Created workflow with name:' + workflow_name + ', ID: ' + str(wf_ids[0]))
-    workflow_node_ids = awx.create_dag(workflow_id=wf_ids[0],
+    workflow_node_ids = awx_inst.create_dag(workflow_id=wf_ids[0],
                                        tosca_workflow=workflow,
                                        topology_template_workflow_steps=topology_template_workflow_steps,
                                        workflow_name=workflow_name,
@@ -83,9 +83,9 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
         logger.info('Launch workflows: ' + str(wf_job_ids))
         launched_ids += wf_job_ids
     for launched_id in launched_ids:
-        while awx.get_workflow_status(launched_id) == 'running':
-            logger.info('Workflow: ' + str(launched_id) + ' status: ' + awx.get_workflow_status(launched_id))
-            workflow_nodes = awx.get_workflow_nodes(launched_id)
+        while awx_inst.get_workflow_status(launched_id) == 'running':
+            logger.info('Workflow: ' + str(launched_id) + ' status: ' + awx_inst.get_workflow_status(launched_id))
+            workflow_nodes = awx_inst.get_workflow_nodes(launched_id)
             for workflow_node in workflow_nodes:
                 if 'job' in workflow_node['summary_fields']:
                     job = workflow_node['summary_fields']['job']
@@ -102,7 +102,7 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
                 job = workflow_node['summary_fields']['job']
                 tosca_template_dict = tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict, job=job,
                                                                   workflow_name=workflow_name,current_time=current_time)
-        attributes_job_ids = awx.get_attributes_job_ids(launched_id)
+        attributes_job_ids = awx_inst.get_attributes_job_ids(launched_id)
         if not attributes_job_ids:
             raise Exception('Could not find attribute job id from workflow: ' + str(launched_id))
         for job_id in attributes_job_ids:

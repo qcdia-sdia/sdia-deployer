@@ -39,7 +39,7 @@ class TestDeployer(unittest.TestCase):
         try:
             f = open(conf_path)
         except IOError:
-            conf_path = 'properties.ini.with_pwd.template'
+            conf_path = 'properties.ini'
             f = open(conf_path)
         finally:
             f.close()

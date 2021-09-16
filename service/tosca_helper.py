@@ -261,7 +261,7 @@ class ToscaHelper:
                     state = activity['set_state']
                     break
         if target_name and state:
-            logger.info('Setting node: ' + target_name + ' state: ' + state)
+            logger.info('wf step: '+wf_step+' node: ' + target_name + ' state: ' + state)
             target = tosca_template_dict['topology_template']['node_templates'][target_name]
             if 'attributes' in target:
                 attributes = target['attributes']

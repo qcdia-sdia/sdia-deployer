@@ -16,7 +16,7 @@ import yaml
 from cryptography.fernet import Fernet
 
 from service.awx_service import AWXService
-from service.tosca_helper import ToscaHelper
+from service.tosca_helper import ToscaHelper, check_workflow_preconditions
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +139,7 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                 for workflow_name in workflows:
                     topology_template_workflow_steps = {}
                     workflow = workflows[workflow_name]
-                    can_run = tosca_helper.check_workflow_preconditions(workflow, tosca_template_dict)
+                    can_run = check_workflow_preconditions(workflow, tosca_template_dict)
                     logger.info('workflow: ' + workflow_name + ' can run: ' + str(can_run))
                     if can_run:
                         steps = workflow['steps']

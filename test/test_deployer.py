@@ -134,10 +134,10 @@ class TestDeployer(unittest.TestCase):
                 updated_node = deployService.deploy(node)
                 if isinstance(updated_node, list):
                     for node in updated_node:
-                        tosca_template_dict = tosca_helper.set_node(node, tosca_template_dict)
+                        tosca_template_dict = set_node(node, tosca_template_dict)
                         # logger.info("tosca_template_dict :" + json.dumps(tosca_template_dict))
                 else:
-                    tosca_template_dict = tosca_helper.set_node(updated_node, tosca_template_dict)
+                    tosca_template_dict = set_node(updated_node, tosca_template_dict)
                     # logger.info("tosca_template_dict :" + json.dumps(tosca_template_dict))
 
             response = {'toscaTemplate': tosca_template_dict}

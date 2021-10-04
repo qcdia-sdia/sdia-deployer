@@ -94,7 +94,7 @@ class AWXService:
             'variables': '',
             'insights_credential': None
         }
-        inventory_ids = self.get_resources(
+        inventory_ids = self.get_resources(api_path=
             'inventories/?name=' + inventory_name + '&organization=' + str(organization_id))
         if inventory_ids and inventory_ids[0]:
             r = self._session.delete(self.api_url + '/inventories/' + str(inventory_ids[0]['id']), headers=self.headers,
@@ -212,12 +212,19 @@ class AWXService:
             inventory_hosts_ids = self.post(body, 'groups/' + str(inventory_group_id) + '/hosts')
         return inventory_hosts_ids
 
-    def get_resources(self, api_path):
+    def get_resources(self, api_path=None,results = None):
         r = self._session.get(self.api_url + '/' + api_path, headers=self.headers, verify=False)
         if r.status_code == 200:
             res_json = r.json()
             if 'results' in res_json:
-                return res_json['results']
+                if not results:
+                    results = []
+                if res_json['results']:
+                    results = results + res_json['results']
+                if 'next' in res_json and res_json['next']:
+                    path = res_json['next'].replace('/api/v2/', '')
+                    results  = results + self.get_resources(api_path=path,results=results)
+                return results
             else:
                 return res_json
         if r.status_code == 404:
@@ -272,7 +279,7 @@ class AWXService:
         while fail_count < 60:
             try:
                 job_templates = \
-                    self.get_resources(
+                    self.get_resources(api_path=
                         'job_templates/?name=' + operation_name + '&organization=' + str(organization_id))
                 if job_templates:
                     job_template = job_templates[0]
@@ -511,7 +518,7 @@ class AWXService:
         return None
 
     def add_child_node(self, identifier, unified_job_template, path, workflow_id=None):
-        res = self.get_resources('workflow_job_template_nodes/?identifier=' + identifier)
+        res = self.get_resources(api_path='workflow_job_template_nodes/?identifier=' + identifier,results = None)
         child_id = None
         if res:
             for child in res:
@@ -552,7 +559,7 @@ class AWXService:
         return wf_job_ids
 
     def get_job_artifacts(self, attributes_job_id):
-        job_output = self.get_resources('jobs/' + str(attributes_job_id) + '/')
+        job_output = self.get_resources(api_path='jobs/' + str(attributes_job_id) + '/')
         if not job_output:
             raise Exception('Job ID: ' + attributes_job_id + ' not found')
         if not 'artifacts' in job_output:
@@ -569,11 +576,11 @@ class AWXService:
         return attribute_job_ids
 
     def get_workflow_status(self, launched_id):
-        workflow = self.get_resources('workflow_jobs/' + str(launched_id) + '/')
+        workflow = self.get_resources(api_path='workflow_jobs/' + str(launched_id) + '/')
         return workflow['status']
 
     def get_job_status(self, job_id):
-        job_template = self.get_resources('job_templates/' + str(job_id) + '/')
+        job_template = self.get_resources(api_path='job_templates/' + str(job_id) + '/')
         return job_template['status']
 
     def set_tosca_node_attributes(self, tosca_template_dict, attributes):
@@ -637,7 +644,7 @@ class AWXService:
                             "username": credential['keys']['aws_access_key_id'],
                         }
                     }
-            credentials = self.get_resources('credentials/?name=' + name + '&organization=' + str(organization_id))
+            credentials = self.get_resources(api_path ='credentials/?name=' + name + '&organization=' + str(organization_id))
             if credentials and credentials[0]:
                 r = self._session.delete(self.api_url + '/credentials/' + str(credentials[0]['id']),
                                          headers=self.headers, verify=False)
@@ -655,7 +662,7 @@ class AWXService:
         return organization_id[0]
 
     def delete(self, api_path, query):
-        resources = self.get_resources(api_path + '/' + query)
+        resources = self.get_resources(api_path=api_path + '/' + query)
         if resources:
             for inventory in resources:
                 r = self._session.delete(self.api_url + '/' + api_path + '/' + str(inventory['id']),
@@ -693,23 +700,23 @@ class AWXService:
         pass
 
     def clean_up_execution(self):
-        workflows_to_delete = self.get_resources('workflow_job_templates/?description=delete_after_execution')
+        workflows_to_delete = self.get_resources(api_path='workflow_job_templates/?description=delete_after_execution')
         for workflow in workflows_to_delete:
             r = self._session.delete(self.api_url + '/workflow_job_templates/' + str(workflow['id']), verify=False,
                                      headers=self.headers)
-        inventories_to_delete = self.get_resources('inventories/?description=delete_after_execution')
+        inventories_to_delete = self.get_resources(api_path='inventories/?description=delete_after_execution')
         for inventory in inventories_to_delete:
             r = self._session.delete(self.api_url + '/inventories/' + str(inventory['id']), verify=False,
                                      headers=self.headers)
-        job_to_delete = self.get_resources('job_templates/?description=delete_after_execution')
+        job_to_delete = self.get_resources(api_path='job_templates/?description=delete_after_execution')
         for job in job_to_delete:
             r = self._session.delete(self.api_url + '/job_templates/' + str(job['id']), verify=False,
                                      headers=self.headers)
-        credentials_to_delete = self.get_resources('credentials/?description=delete_after_execution')
+        credentials_to_delete = self.get_resources(api_path='credentials/?description=delete_after_execution')
         for credential in credentials_to_delete:
             r = self._session.delete(self.api_url + '/credentials/' + str(credential['id']), verify=False,
                                      headers=self.headers)
 
     def get_workflow_nodes(self, wf_job_id):
-        workflow_nodes = self.get_resources('workflow_jobs/' + str(wf_job_id) + '/workflow_nodes/')
+        workflow_nodes = self.get_resources(api_path='workflow_jobs/' + str(wf_job_id) + '/workflow_nodes/')
         return workflow_nodes

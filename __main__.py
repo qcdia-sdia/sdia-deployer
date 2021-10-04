@@ -72,11 +72,14 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
     logger.info('Creating workflow: ' + str(workflow_name))
     wf_ids = awx_inst.create_workflow(description=description, workflow_name=workflow_name)
     logger.info('Created workflow with name:' + workflow_name + ', ID: ' + str(wf_ids[0]))
+
+
     workflow_node_ids = awx_inst.create_dag(workflow_id=wf_ids[0],
                                        tosca_workflow=workflow,
                                        topology_template_workflow_steps=topology_template_workflow_steps,
                                        workflow_name=workflow_name,
                                        current_time=current_time)
+
     logger.info('Added nodes to workflow')
     for wf_id in wf_ids:
         wf_job_ids = awx_inst.launch(wf_id)
@@ -254,6 +257,11 @@ def decrypt(contents, key):
         exit(-1)
 
 
+def handle_exception(ex,workflow_name=None,tosca_template=None):
+
+    pass
+
+
 def handle_delivery(message):
     logger.info("Got: " + str(message))
     try:
@@ -271,7 +279,8 @@ def handle_delivery(message):
     try:
         return awx(tosca_template_dict=tosca_template_dict, tosca_template_path=tosca_template_path)
     except (Exception) as ex:
-        tosca_template_dict['error'] = str(ex)
+        tosca_template_dict = handle_exception(ex)
+        # tosca_template_dict['error'] = str(ex)
         return tosca_template_dict
 
 

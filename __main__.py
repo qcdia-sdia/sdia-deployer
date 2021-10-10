@@ -155,7 +155,7 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                                 node_templates=node_templates,
                                 step_name=step_name+'_'+str(current_time),
                                 workflow_name=workflow_name+'_'+str(current_time),
-                                num_of_forks=64)
+                                num_of_forks=100)
                             topology_template_workflow_steps.update(node_workflow_steps)
 
                         tosca_template_dict = execute_workflows(workflow=workflow, workflow_name=workflow_name+'_'+str(current_time),

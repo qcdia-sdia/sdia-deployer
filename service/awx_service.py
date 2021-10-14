@@ -586,7 +586,7 @@ class AWXService:
     def set_tosca_node_attributes(self, tosca_template_dict, attributes):
         node_templates = tosca_template_dict['topology_template']['node_templates']
         for node_name in attributes:
-            if 'attributes' in node_templates[node_name]:
+            if node_name in node_templates and 'attributes' in node_templates[node_name]:
                 node_attributes = node_templates[node_name]['attributes']
             else:
                 node_attributes = {}

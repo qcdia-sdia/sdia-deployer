@@ -73,12 +73,11 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
     wf_ids = awx_inst.create_workflow(description=description, workflow_name=workflow_name)
     logger.info('Created workflow with name:' + workflow_name + ', ID: ' + str(wf_ids[0]))
 
-
     workflow_node_ids = awx_inst.create_dag(workflow_id=wf_ids[0],
-                                       tosca_workflow=workflow,
-                                       topology_template_workflow_steps=topology_template_workflow_steps,
-                                       workflow_name=workflow_name,
-                                       current_time=current_time)
+                                            tosca_workflow=workflow,
+                                            topology_template_workflow_steps=topology_template_workflow_steps,
+                                            workflow_name=workflow_name,
+                                            current_time=current_time)
 
     logger.info('Added nodes to workflow')
     for wf_id in wf_ids:
@@ -93,7 +92,8 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
                 if 'job' in workflow_node['summary_fields']:
                     job = workflow_node['summary_fields']['job']
                     tosca_template_dict = tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict,
-                                                                      job=job, workflow_name=workflow_name,current_time=current_time)
+                                                                      job=job, workflow_name=workflow_name,
+                                                                      current_time=current_time)
             sleep(10)
         job_status = awx_inst.get_workflow_status(launched_id)
         if 'failed' == job_status:
@@ -104,7 +104,8 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
             if 'job' in workflow_node['summary_fields']:
                 job = workflow_node['summary_fields']['job']
                 tosca_template_dict = tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict, job=job,
-                                                                  workflow_name=workflow_name,current_time=current_time)
+                                                                  workflow_name=workflow_name,
+                                                                  current_time=current_time)
         attributes_job_ids = awx_inst.get_attributes_job_ids(launched_id)
         if not attributes_job_ids:
             raise Exception('Could not find attribute job id from workflow: ' + str(launched_id))
@@ -147,18 +148,18 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                     if can_run:
                         steps = workflow['steps']
                         for step_name in steps:
-
                             logger.info('Created step_name: ' + str(step_name))
                             node_workflow_steps = awx_inst.create_workflow_templates(
                                 tosca_workflow_step=steps[step_name],
                                 organization_id=organization_id,
                                 node_templates=node_templates,
-                                step_name=step_name+'_'+str(current_time),
-                                workflow_name=workflow_name+'_'+str(current_time),
+                                step_name=step_name + '_' + str(current_time),
+                                workflow_name=workflow_name + '_' + str(current_time),
                                 num_of_forks=100)
                             topology_template_workflow_steps.update(node_workflow_steps)
 
-                        tosca_template_dict = execute_workflows(workflow=workflow, workflow_name=workflow_name+'_'+str(current_time),
+                        tosca_template_dict = execute_workflows(workflow=workflow,
+                                                                workflow_name=workflow_name + '_' + str(current_time),
                                                                 topology_template_workflow_steps=topology_template_workflow_steps,
                                                                 awx_inst=awx_inst,
                                                                 tosca_template_dict=tosca_template_dict,
@@ -257,9 +258,9 @@ def decrypt(contents, key):
         exit(-1)
 
 
-def handle_exception(ex,workflow_name=None,tosca_template=None):
-
-    pass
+def handle_exception(ex=None, workflow_name=None, tosca_template=None):
+    error_report = str(ex)
+    return tosca_template, error_report
 
 
 def handle_delivery(message):
@@ -278,10 +279,12 @@ def handle_delivery(message):
     # if 'workflows' in tosca_template_dict['topology_template']:
     try:
         return awx(tosca_template_dict=tosca_template_dict, tosca_template_path=tosca_template_path)
-    except (Exception) as ex:
-        tosca_template_dict = handle_exception(ex)
+    except Exception as ex:
+        tosca_template_dict, error_report = handle_exception(tosca_template=tosca_template_dict, ex=ex)
         # tosca_template_dict['error'] = str(ex)
-        return tosca_template_dict
+        response = {'toscaTemplate': tosca_template_dict, 'errorReport': error_report}
+        logger.info("Output message:" + json.dumps(response))
+        return json.dumps(response)
 
 
 def threaded_function(args):

@@ -593,7 +593,7 @@ class AWXService:
             node_attributes.update(attributes[node_name])
             if 'attributes' in node_attributes:
                 node_templates[node_name]['attributes'] = node_attributes['attributes']
-            else:
+            elif node_name in node_templates:
                 node_templates[node_name]['attributes'] = node_attributes
         return tosca_template_dict
 

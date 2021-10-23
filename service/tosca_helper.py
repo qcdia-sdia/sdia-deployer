@@ -254,6 +254,9 @@ class ToscaHelper:
             index = 0
             for activity in activities:
                 index += 1
+                if job['status'] == 'failed':
+                    state = 'FAILED'
+                    break
                 if job['status'] == 'running' and 'set_state' in activity and index <= 1:
                     state = activity['set_state']
                     break

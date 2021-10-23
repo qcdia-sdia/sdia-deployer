@@ -95,11 +95,21 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
                                                                       job=job, workflow_name=workflow_name,
                                                                       current_time=current_time)
             sleep(10)
-        job_status = awx_inst.get_workflow_status(launched_id)
-        if 'failed' == job_status:
-            raise Exception('Workflow execution failed')
-
+        wf_status = awx_inst.get_workflow_status(launched_id)
         workflow_nodes = awx_inst.get_workflow_nodes(launched_id)
+        if 'failed' == wf_status:
+            tosca_template_dict = tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict, job=job,
+                                                              workflow_name=workflow_name,
+                                                              current_time=current_time)
+            failed_nodes = []
+            for node in workflow_nodes:
+                if 'summary_fields' in node and 'job' in node['summary_fields'] and node['summary_fields']['job']['status'] == 'failed':
+                    failed_nodes.append(node['summary_fields']['job']['name'])
+            if failed_nodes:
+                raise Exception('Workflow execution failed. Failed nodes: '+str(failed_nodes))
+            else:
+                raise Exception('Workflow execution failed.')
+
         for workflow_node in workflow_nodes:
             if 'job' in workflow_node['summary_fields']:
                 job = workflow_node['summary_fields']['job']

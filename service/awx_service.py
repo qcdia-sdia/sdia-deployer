@@ -321,6 +321,8 @@ class AWXService:
             if 'call_operation' in activity:
                 call_operation = activity['call_operation']
                 break
+        if not call_operation:
+            raise Exception('Workflow step: '+step_name + ' has no call_operation')
         if 'interfaces' in tosca_node:
             interfaces = tosca_node['interfaces']
             interface_name = call_operation.split('.')[0]
@@ -332,7 +334,7 @@ class AWXService:
                 template_name = workflow_name + '.' + step_name
                 logger.info('Creating template: ' + template_name)
                 extra_variables = None
-                if not 'repository' in template['inputs']:
+                if 'repository' not in template['inputs']:
                     raise Exception('Workflow steps for: ' + template_name + ' have no repository: ' + str(template))
                 if 'inputs' in template and 'repository' in template['inputs']:
                     repository_url = template['inputs']['repository']

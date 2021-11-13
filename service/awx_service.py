@@ -321,6 +321,7 @@ class AWXService:
             if 'call_operation' in activity:
                 call_operation = activity['call_operation']
                 break
+        
         if not call_operation:
             raise Exception('Workflow step: '+step_name + ' has no call_operation')
         if 'interfaces' in tosca_node:
@@ -564,7 +565,7 @@ class AWXService:
         job_output = self.get_resources(api_path='jobs/' + str(attributes_job_id) + '/')
         if not job_output:
             raise Exception('Job ID: ' + attributes_job_id + ' not found')
-        if not 'artifacts' in job_output:
+        if 'artifacts' not in job_output:
             raise Exception('Job ID: ' + attributes_job_id + ' has no artifacts')
         return job_output['artifacts']
 

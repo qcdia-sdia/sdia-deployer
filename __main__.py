@@ -49,6 +49,7 @@ def on_request(ch, method, props, body):
                                                      props.correlation_id),
                      body=str(response))
     ch.basic_ack(delivery_tag=method.delivery_tag)
+    ch.queue_declare(queue='status-'+props.reply_to)
 
 
 def save_tosca_template(tosca_template_dict):
@@ -94,6 +95,7 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
                     tosca_template_dict = tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict,
                                                                       job=job, workflow_name=workflow_name,
                                                                       current_time=current_time)
+                    # update_tosca_template(tosca_template_dict)
             sleep(10)
         wf_status = awx_inst.get_workflow_status(launched_id)
         workflow_nodes = awx_inst.get_workflow_nodes(launched_id)
@@ -101,6 +103,7 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
             tosca_template_dict = tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict, job=job,
                                                               workflow_name=workflow_name,
                                                               current_time=current_time)
+            # update_tosca_template(tosca_template_dict)
             failed_nodes = []
             for node in workflow_nodes:
                 if 'summary_fields' in node and 'job' in node['summary_fields'] and node['summary_fields']['job']['status'] == 'failed':
@@ -116,6 +119,7 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
                 tosca_template_dict = tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict, job=job,
                                                                   workflow_name=workflow_name,
                                                                   current_time=current_time)
+                # update_tosca_template(tosca_template_dict)
         attributes_job_ids = awx_inst.get_attributes_job_ids(launched_id)
         if not attributes_job_ids:
             raise Exception('Could not find attribute job id from workflow: ' + str(launched_id))

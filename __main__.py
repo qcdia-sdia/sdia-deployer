@@ -13,6 +13,7 @@ from time import sleep
 import datetime
 import pika
 import yaml
+from concurrent.futures import as_completed, ThreadPoolExecutor
 from cryptography.fernet import Fernet
 
 from service.awx_service import AWXService
@@ -86,7 +87,10 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
         logger.info('Launch workflows: ' + str(wf_job_ids))
         launched_ids += wf_job_ids
     for launched_id in launched_ids:
-        while awx_inst.get_workflow_status(launched_id) == 'running':
+        logger.info('Workflow: ' + str(launched_id) + ' status: ' + awx_inst.get_workflow_status(launched_id))
+        while awx_inst.get_workflow_status(launched_id) == 'running' or \
+                awx_inst.get_workflow_status(launched_id) == 'pending' or \
+                awx_inst.get_workflow_status(launched_id) == 'waiting':
             logger.info('Workflow: ' + str(launched_id) + ' status: ' + awx_inst.get_workflow_status(launched_id))
             workflow_nodes = awx_inst.get_workflow_nodes(launched_id)
             for workflow_node in workflow_nodes:
@@ -98,6 +102,7 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
                     # update_tosca_template(tosca_template_dict)
             sleep(10)
         wf_status = awx_inst.get_workflow_status(launched_id)
+        logger.info('Workflow status: ' + str(wf_status))
         workflow_nodes = awx_inst.get_workflow_nodes(launched_id)
         if 'failed' == wf_status:
             tosca_template_dict = tosca_helper.set_node_state(tosca_template_dict=tosca_template_dict, job=job,
@@ -129,6 +134,13 @@ def execute_workflows(workflow=None, workflow_name=None, topology_template_workf
 
     return tosca_template_dict
 
+def create_workflow_templates(tosca_workflow_step=None,
+                                organization_id=None,
+                                node_templates=None,
+                                step_name=None,
+                                workflow_name=None,
+                                num_of_forks=None):
+    pass
 
 def awx(tosca_template_path=None, tosca_template_dict=None):
     awx_inst = None
@@ -156,11 +168,20 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
                 launched_workflows = []
                 for workflow_name in workflows:
                     topology_template_workflow_steps = {}
+                    futures = {}
                     workflow = workflows[workflow_name]
                     can_run = check_workflow_preconditions(workflow, tosca_template_dict)
                     logger.info('workflow: ' + workflow_name + ' can run: ' + str(can_run))
                     if can_run:
                         steps = workflow['steps']
+                        # with ThreadPoolExecutor(max_workers=10) as executor:
+                        #     for step_name in steps:
+                        #         futures.update(executor.submit(create_workflow_templates, tosca_workflow_step=steps[step_name],
+                        #         organization_id=organization_id,
+                        #         node_templates=node_templates,
+                        #         step_name=step_name + '_' + str(current_time),
+                        #         workflow_name=workflow_name + '_' + str(current_time),
+                        #         num_of_forks=100))
                         for step_name in steps:
                             logger.info('Created step_name: ' + str(step_name))
                             node_workflow_steps = awx_inst.create_workflow_templates(

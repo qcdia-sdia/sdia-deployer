@@ -562,6 +562,8 @@ class AWXService:
         return wf_job_ids
 
     def get_job_artifacts(self, attributes_job_id):
+        if not attributes_job_id:
+            raise Exception('attributes_job_id is None!')
         job_output = self.get_resources(api_path='jobs/' + str(attributes_job_id) + '/')
         if not job_output:
             raise Exception('Job ID: ' + attributes_job_id + ' not found')

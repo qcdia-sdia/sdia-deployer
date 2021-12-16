@@ -17,10 +17,12 @@ awx_username = 'admin'
 awx_password = 'password'
 logger = logging.getLogger(__name__)
 
+
 class TestTOSCAHelper(unittest.TestCase):
 
     def test_resolve_function_values(self):
-        tosca_template_dict = self.get_tosca_from_url('https://raw.githubusercontent.com/qcdis-sdia/sdia-tosca/master/examples/articonf/TIC_ec2_wf_with_bank.yaml')
+        tosca_template_dict = self.get_tosca_from_url(
+            'https://raw.githubusercontent.com/qcdis-sdia/sdia-tosca/master/examples/articonf/TIC_ec2_wf_with_bank.yaml')
 
         tmp_path = tempfile.mkdtemp()
         tosca_template_path = tmp_path + os.path.sep + 'toscaTemplate.yml'
@@ -39,10 +41,9 @@ class TestTOSCAHelper(unittest.TestCase):
                     interface_ancestors = tosca_helper.get_interface_ancestors(interface_name)
                     self.assertIsNotNone(interface_ancestors)
 
-
-
     def test(self):
-        tosca_template_dict = self.get_tosca_from_url('https://raw.githubusercontent.com/qcdis-sdia/sdia-tosca/master/examples/TIC_planed.yaml')
+        tosca_template_dict = self.get_tosca_from_url(
+            'https://raw.githubusercontent.com/qcdis-sdia/sdia-tosca/master/examples/articonf/TIC_ec2_wf_with_bank.yaml')
 
         tmp_path = tempfile.mkdtemp()
         tosca_template_path = tmp_path + os.path.sep + 'toscaTemplate.yml'

@@ -95,7 +95,8 @@ class AWXService:
             'insights_credential': None
         }
         inventory_ids = self.get_resources(api_path=
-            'inventories/?name=' + inventory_name + '&organization=' + str(organization_id))
+                                           'inventories/?name=' + inventory_name + '&organization=' + str(
+                                               organization_id))
         if inventory_ids and inventory_ids[0]:
             r = self._session.delete(self.api_url + '/inventories/' + str(inventory_ids[0]['id']), headers=self.headers,
                                      verify=False)
@@ -212,7 +213,7 @@ class AWXService:
             inventory_hosts_ids = self.post(body, 'groups/' + str(inventory_group_id) + '/hosts')
         return inventory_hosts_ids
 
-    def get_resources(self, api_path=None,results = None):
+    def get_resources(self, api_path=None, results=None):
         r = self._session.get(self.api_url + '/' + api_path, headers=self.headers, verify=False)
         if r.status_code == 200:
             res_json = r.json()
@@ -223,7 +224,7 @@ class AWXService:
                     results = results + res_json['results']
                 if 'next' in res_json and res_json['next']:
                     path = res_json['next'].replace('/api/v2/', '')
-                    results  = results + self.get_resources(api_path=path,results=results)
+                    results = results + self.get_resources(api_path=path, results=results)
                 return results
             else:
                 return res_json
@@ -280,12 +281,13 @@ class AWXService:
             try:
                 job_templates = \
                     self.get_resources(api_path=
-                        'job_templates/?name=' + operation_name + '&organization=' + str(organization_id))
+                                       'job_templates/?name=' + operation_name + '&organization=' + str(
+                                           organization_id))
                 if job_templates:
                     job_template = job_templates[0]
                     try:
                         job_templates_ids = self.put(body, 'job_templates/' + str(job_template['id']))
-                    except (Exception) as ex:
+                    except Exception as ex:
                         track = traceback.format_exc()
                         print(track)
                         raise ex
@@ -321,9 +323,9 @@ class AWXService:
             if 'call_operation' in activity:
                 call_operation = activity['call_operation']
                 break
-        
+
         if not call_operation:
-            raise Exception('Workflow step: '+step_name + ' has no call_operation')
+            raise Exception('Workflow step: ' + step_name + ' has no call_operation')
         if 'interfaces' in tosca_node:
             interfaces = tosca_node['interfaces']
             interface_name = call_operation.split('.')[0]
@@ -366,7 +368,9 @@ class AWXService:
                 else:
                     raise Exception(template_name + ' has no implementation!')
                 if workflow_template_node:
-                    logger.info('Created workflow_template_node: ' + str(workflow_template_node)+' number of forks: '+str(num_of_forks))
+                    logger.info(
+                        'Created workflow_template_node: ' + str(workflow_template_node) + ' number of forks: ' + str(
+                            num_of_forks))
                     awx_workflow_steps.update(workflow_template_node)
         return awx_workflow_steps
 
@@ -521,7 +525,7 @@ class AWXService:
         return None
 
     def add_child_node(self, identifier, unified_job_template, path, workflow_id=None):
-        res = self.get_resources(api_path='workflow_job_template_nodes/?identifier=' + identifier,results = None)
+        res = self.get_resources(api_path='workflow_job_template_nodes/?identifier=' + identifier, results=None)
         child_id = None
         if res:
             for child in res:
@@ -607,15 +611,15 @@ class AWXService:
             body = {}
             if 'protocol' in credential and 'ssh' == credential['protocol']:
                 decoded_key = base64.b64decode(credential['keys']['private_key'])
-                decoded_key_str = str(decoded_key, "utf-8")
+                decoded_key_str = str(decoded_key, 'utf-8')
 
                 body = {
-                    "description": 'delete_after_execution',
-                    "name": name,
-                    "organization": organization_id,
-                    "credential_type": 1,
-                    "inputs": {
-                        "ssh_key_data": decoded_key_str,
+                    'description': 'delete_after_execution',
+                    'name': name,
+                    'organization': organization_id,
+                    'credential_type': 1,
+                    'inputs': {
+                        'ssh_key_data': decoded_key_str,
                     }
                 }
             if 'cloud_provider_name' in credential:
@@ -630,11 +634,11 @@ class AWXService:
                         'secret': credential['token'],
                         'subscription': credential['extra_properties']['subscription_id'],
                         'credential_type': 10,
-                        "inputs": {
-                            "client": credential['user'],
-                            "secret": credential['token'],
-                            "tenant": credential['extra_properties']['tenant'],
-                            "subscription": credential['extra_properties']['subscription_id']
+                        'inputs': {
+                            'client': credential['user'],
+                            'secret': credential['token'],
+                            'tenant': credential['extra_properties']['tenant'],
+                            'subscription': credential['extra_properties']['subscription_id']
                         }
                     }
                 if credential['cloud_provider_name'] == 'EC2':
@@ -644,12 +648,31 @@ class AWXService:
                         'organization': organization_id,
                         'kind': 'aws',
                         'credential_type': 5,
-                        "inputs": {
-                            "password": credential['token'],
-                            "username": credential['keys']['aws_access_key_id'],
+                        'inputs': {
+                            'password': credential['token'],
+                            'username': credential['keys']['aws_access_key_id'],
                         }
                     }
-            credentials = self.get_resources(api_path ='credentials/?name=' + name + '&organization=' + str(organization_id))
+                if credential['cloud_provider_name'] == 'OpenStack':
+                    body = {
+                        'name': name,
+                        'description': 'delete_after_execution',
+                        'organization': organization_id,
+                        'kind': 'openstack',
+                        'credential_type': 6,
+                        'inputs': {
+                            'host': credential['auth_url'],
+                            'domain': credential['extra_properties']['domain'],
+                            'region': credential['extra_properties']['domain'],
+                            'project': credential['extra_properties']['project_id'],
+                            'password': credential['token'],
+                            'username': credential['user'],
+                            'verify_ssl': True,
+                            'project_domain_name': credential['extra_properties']['domain']
+                        }
+                    }
+            credentials = self.get_resources(
+                api_path='credentials/?name=' + name + '&organization=' + str(organization_id))
             if credentials and credentials[0]:
                 r = self._session.delete(self.api_url + '/credentials/' + str(credentials[0]['id']),
                                          headers=self.headers, verify=False)
@@ -659,9 +682,9 @@ class AWXService:
 
     def create_organization(self, name):
         body = {
-            "name": name,
-            "description": "",
-            "max_hosts": 99
+            'name': name,
+            'description': '',
+            'max_hosts': 99
         }
         organization_id = self.post(body, 'organizations')
         return organization_id[0]

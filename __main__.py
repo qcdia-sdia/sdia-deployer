@@ -211,7 +211,7 @@ def awx(tosca_template_path=None, tosca_template_dict=None):
     tosca_template_dict = encrypt_credentials(tosca_template_dict)
     response = {'toscaTemplate': tosca_template_dict}
     logger.info("Returning Deployment")
-    logger.info("Output message:" + json.dumps(response))
+    # logger.info("Output message:" + json.dumps(response))
     return json.dumps(response)
 
 
@@ -299,7 +299,7 @@ def handle_exception(ex=None, workflow_name=None, tosca_template=None):
 
 
 def handle_delivery(message):
-    logger.info("Got: " + str(message))
+    logger.info("Got new message")
     try:
         message = message.decode()
     except (UnicodeDecodeError, AttributeError):

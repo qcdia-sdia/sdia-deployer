@@ -281,7 +281,6 @@ class ToscaHelper:
         credentials = []
         for name in ['attributes', 'properties']:
             if name in tosca_node:
-                # for cred_name in ['credential', 'credentials', 'user_key_pair']:
                 for cred_name in ['credential', 'credentials', 'user_key_pair']:
                     if cred_name in tosca_node[name]:
                         credential = tosca_node[name][cred_name]

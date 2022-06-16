@@ -333,6 +333,10 @@ class AWXService:
             ancestors = self.tosca_helper.get_interface_ancestors(interface_name)
             if 'tosca.interfaces.QC.Ansible' in ancestors:
                 workflow_template_node = {}
+                if tosca_interface_job not in interfaces[interface_name]:
+                    raise Exception(
+                        tosca_interface_job + ' is not in ' + interface_name + 'interface. Check input TOSCA '
+                                                                               'of ' + interface_name + 'interface definition')
                 template = interfaces[interface_name][tosca_interface_job]
                 template_name = workflow_name + '.' + step_name
                 logger.info('Creating template: ' + template_name)
